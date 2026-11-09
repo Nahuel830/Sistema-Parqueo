@@ -40,6 +40,9 @@ Cada documento se encuentra en su propia rama:
 | Requerimientos no funcionales | `requerimientos-no-funcionales` | `docs/requerimientos-no-funcionales.md` |
 | Actores | `actores` | `docs/actores.md` |
 
-## Autor
-
-Nahuel830
+## Nombres  
+Nahuel Fernando Martinez Mariscal
+Jose Manuel Huarachi Colque
+Xavier Castrillo
+Jorge Villa Rubia
+Rodrigo Porcel
