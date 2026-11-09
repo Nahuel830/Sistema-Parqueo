@@ -41,8 +41,8 @@ Cada documento se encuentra en su propia rama:
 | Actores | `actores` | `docs/actores.md` |
 
 ## Nombres  
-Nahuel Fernando Martinez Mariscal
-Jose Manuel Huarachi Colque
-Xavier Castrillo
-Jorge Villa Rubia
+Nahuel Fernando Martinez Mariscal/
+Jose Manuel Huarachi Colque/
+Xavier Castrillo/
+Jorge Villa Rubia/
 Rodrigo Porcel
