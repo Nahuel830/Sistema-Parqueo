@@ -40,6 +40,25 @@ Cada documento se encuentra en su propia rama:
 | Requerimientos no funcionales | `requerimientos-no-funcionales` | `docs/requerimientos-no-funcionales.md` |
 | Actores | `actores` | `docs/actores.md` |
 
+
+## Definiciones, acrónimos y abreviaturas
+
+Término / acrónimo	Definición
+
+SRS	Especificación de Requerimientos de Software (Software Requirements Specification).
+
+IEEE;	Institute of Electrical and Electronics Engineers; entidad citada en el formato de referencia.
+PRD;	Documento de Requisitos del Producto; término incluido en la guía.
+MRD;	Documento de Requisitos de Marketing; término incluido en la guía.
+QR;	Código de respuesta rápida, utilizado para presentar los datos de una solicitud de cobro.
+Sector;	Zona de parqueo tarifado bajo seguimiento de un encargado.
+Espacio / plaza;	Unidad individual y numerada de estacionamiento.
+Reserva temporal	Retención provisional de un espacio durante cinco minutos.
+Ficha electrónica	;Comprobante o identificador digital asociado a una reserva y a su estado de pago.
+Validación presencial;	Acción del encargado para confirmar la ficha presentada por el conductor.
+Auditoría	;Consulta del historial de acciones, cancelaciones, vencimientos y verificaciones.
+
+
 ## Nombres  
 Nahuel Fernando Martinez Mariscal/
 Jose Manuel Huarachi Colque/
