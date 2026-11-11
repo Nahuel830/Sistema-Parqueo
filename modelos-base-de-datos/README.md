@@ -1,19 +1,9 @@
-# Modelos de la base de datos – Sistema de Parqueo Tarija
+# Modelos de la base de datos
 
-Esta carpeta contiene los **3 modelos de diagramas** de la base de datos, hechos en [draw.io](https://app.diagrams.net) (archivo `modelos-bd-sistema-parqueo.drawio`, una pestaña por modelo):
+Aquí están los 3 diagramas de la base de datos del sistema de parqueo, hechos en draw.io. Están todos en un solo archivo (`modelos-bd-sistema-parqueo.drawio`), cada modelo en su propia pestaña.
 
-| Pestaña | Modelo | Qué muestra |
-|---|---|---|
-| 1. Conceptual | Modelo conceptual (Entidad-Relación, notación Chen) | Entidades, atributos, relaciones y cardinalidades (mín,máx). Sin claves foráneas ni tipos de datos. |
-| 2. Lógico-Relacional | Modelo lógico / relacional | Tablas con sus columnas, claves primarias (PK), claves foráneas (FK) y el esquema relacional en texto. |
-| 3. Físico | Modelo físico (PostgreSQL) | Tipos de datos, restricciones (NOT NULL, UNIQUE, DEFAULT, CHECK, FK) e índices. |
-
-## Entidades
-
-SECTOR, LUGAR, TARIFA, USUARIO (encargado/administrador), RESERVA, PAGO, FICHA, CANCELACION, NOTIFICACION y BITACORA (auditoría).
-
-El conductor no es una entidad porque no tiene login; solo se guarda la `placa` en la reserva.
-
-## Cómo abrirlo
-
-Entrar a https://app.diagrams.net → **Archivo → Abrir desde → Dispositivo** y elegir `modelos-bd-sistema-parqueo.drawio`.
+| Pestaña | Modelo |
+|---|---|
+| 1. Conceptual | Entidades, atributos y relaciones (modelo entidad-relación) |
+| 2. Lógico-Relacional | Las tablas con sus claves primarias y foráneas |
+| 3. Físico | Las tablas con tipos de datos, restricciones e índices |
