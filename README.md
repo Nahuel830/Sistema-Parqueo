@@ -63,5 +63,5 @@ Auditoría	;Consulta del historial de acciones, cancelaciones, vencimientos y ve
 Nahuel Fernando Martinez Mariscal/
 Jose Manuel Huarachi Colque/
 Xavier Castrillo/
-Jorge Villa Rubia/
+Sergio Villa Rubia/
 Rodrigo Porcel
