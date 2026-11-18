@@ -6,6 +6,22 @@ function manejadorErrores(error, req, res, next) {
     });
   }
 
+  const erroresDeConexion = [
+    'ECONNREFUSED',
+    'ER_ACCESS_DENIED_ERROR',
+    'ER_BAD_DB_ERROR',
+    'ETIMEDOUT',
+    'PROTOCOL_CONNECTION_LOST',
+  ];
+
+  if (erroresDeConexion.includes(error.code)) {
+    console.error('Error de conexión con MySQL:', error.code);
+    return res.status(503).json({
+      ok: false,
+      mensaje: 'No se pudo conectar a la base de datos',
+    });
+  }
+
   const estado = error.status || 500;
 
   if (estado >= 500) {
