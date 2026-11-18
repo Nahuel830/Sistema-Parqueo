@@ -19,7 +19,19 @@
               "path": ["api", "estado"]
             },
             "description": "Verifica que la API esté en ejecución."
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"La API esta operativa\", () => pm.expect(pm.response.json().ok).to.eql(true));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Estado de MySQL",
@@ -32,7 +44,78 @@
               "path": ["api", "estado", "bd"]
             },
             "description": "Verifica la conexión con MySQL. Responde 503 mientras la base de datos no esté disponible."
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Conecta con la base de datos\", () => pm.expect(pm.response.json().ok).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sectores",
+      "item": [
+        {
+          "name": "Listar sectores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sectores",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sectores"]
+            },
+            "description": "Lista los sectores activos con su total de lugares y lugares libres."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const respuesta = pm.response.json();",
+                  "pm.test(\"Devuelve la lista de sectores\", () => pm.expect(respuesta.datos).to.be.an(\"array\"));",
+                  "pm.test(\"Devuelve 2 sectores\", () => pm.expect(respuesta.datos.length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar lugares de un sector",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sectores/{{idSector}}/lugares",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sectores", "{{idSector}}", "lugares"]
+            },
+            "description": "Devuelve el sector y sus lugares ordenados por número."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const datos = pm.response.json().datos;",
+                  "pm.test(\"Incluye el sector\", () => pm.expect(datos.sector).to.be.an(\"object\"));",
+                  "pm.test(\"Devuelve 20 lugares\", () => pm.expect(datos.lugares.length).to.eql(20));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
@@ -41,6 +124,11 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "idSector",
+      "value": "1",
       "type": "string"
     }
   ]
