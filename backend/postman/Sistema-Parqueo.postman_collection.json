@@ -1,0 +1,47 @@
+{
+  "info": {
+    "name": "Sistema de Parqueo - API",
+    "description": "Colección de pruebas de la API REST del Sistema de Parqueo de Tarija. Los endpoints de sectores, lugares, reservas, pagos, fichas y autenticación se agregan en las siguientes actividades.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Salud",
+      "item": [
+        {
+          "name": "Estado de la API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/salud",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "salud"]
+            },
+            "description": "Verifica que la API esté en ejecución."
+          }
+        },
+        {
+          "name": "Estado de MySQL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/salud/bd",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "salud", "bd"]
+            },
+            "description": "Verifica la conexión con MySQL. Responde 503 mientras la base de datos no esté creada."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}
