@@ -34,7 +34,7 @@
           ]
         },
         {
-          "name": "Estado de MySQL",
+          "name": "Estado de PostgreSQL",
           "request": {
             "method": "GET",
             "header": [],
@@ -43,7 +43,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "estado", "bd"]
             },
-            "description": "Verifica la conexión con MySQL. Responde 503 mientras la base de datos no esté disponible."
+            "description": "Verifica la conexión con PostgreSQL. Responde 503 mientras la base de datos no esté disponible."
           },
           "event": [
             {
