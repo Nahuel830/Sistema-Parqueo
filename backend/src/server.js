@@ -10,6 +10,16 @@ const servidor = app.listen(config.puerto, () => {
   );
 });
 
+servidor.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(
+      `El puerto ${config.puerto} ya está en uso. Cierra el proceso que lo ocupa o cambia PORT en el archivo .env.`
+    );
+    process.exit(1);
+  }
+  throw error;
+});
+
 async function cerrar(senal) {
   console.log(`\n${senal} recibido: cerrando la API...`);
   servidor.close(async () => {
