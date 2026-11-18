@@ -8,14 +8,17 @@ function manejadorErrores(error, req, res, next) {
 
   const erroresDeConexion = [
     'ECONNREFUSED',
-    'ER_ACCESS_DENIED_ERROR',
-    'ER_BAD_DB_ERROR',
+    'ENOTFOUND',
     'ETIMEDOUT',
-    'PROTOCOL_CONNECTION_LOST',
+    '08001',
+    '08006',
+    '28P01',
+    '3D000',
+    '57P03',
   ];
 
   if (erroresDeConexion.includes(error.code)) {
-    console.error('Error de conexión con MySQL:', error.code);
+    console.error('Error de conexión con PostgreSQL:', error.code);
     return res.status(503).json({
       ok: false,
       mensaje: 'No se pudo conectar a la base de datos',

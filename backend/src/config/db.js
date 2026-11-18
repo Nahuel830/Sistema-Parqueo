@@ -1,27 +1,25 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 const { config } = require('./env');
 
-const pool = mysql.createPool({
+const pool = new Pool({
   host: config.bd.host,
   port: config.bd.puerto,
   user: config.bd.usuario,
   password: config.bd.contrasena,
   database: config.bd.nombre,
-  waitForConnections: true,
-  connectionLimit: config.bd.maximoConexiones,
-  queueLimit: 0,
-  charset: 'utf8mb4',
-  timezone: config.bd.zonaHoraria,
-  decimalNumbers: true,
+  max: config.bd.maximoConexiones,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  ssl: config.bd.ssl ? { rejectUnauthorized: false } : false,
+  options: `-c timezone=${config.zonaHoraria}`,
+});
+
+pool.on('error', (error) => {
+  console.error('Error inesperado en el pool de PostgreSQL:', error.message);
 });
 
 async function probarConexion() {
-  const conexion = await pool.getConnection();
-  try {
-    await conexion.ping();
-  } finally {
-    conexion.release();
-  }
+  await pool.query('SELECT 1');
 }
 
 async function cerrarPool() {

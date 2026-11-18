@@ -15,11 +15,11 @@ function obtenerEstado(req, res) {
 async function obtenerEstadoBd(req, res) {
   try {
     await probarConexion();
-    res.json({ ok: true, mensaje: 'Conexión a MySQL establecida' });
+    res.json({ ok: true, mensaje: 'Conexión a PostgreSQL establecida' });
   } catch (error) {
     res.status(503).json({
       ok: false,
-      mensaje: 'No se pudo conectar a MySQL',
+      mensaje: 'No se pudo conectar a PostgreSQL',
       detalle: error.code || error.message,
     });
   }

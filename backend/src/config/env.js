@@ -39,12 +39,12 @@ const config = {
   bcryptRondas: numero(process.env.BCRYPT_ROUNDS, 10),
   bd: {
     host: process.env.DB_HOST || '127.0.0.1',
-    puerto: numero(process.env.DB_PORT, 3306),
-    usuario: process.env.DB_USER || 'parqueo',
+    puerto: numero(process.env.DB_PORT, 5432),
+    usuario: process.env.DB_USER || 'postgres',
     contrasena: process.env.DB_PASSWORD || '',
     nombre: process.env.DB_NAME || 'parqueo_tarija',
     maximoConexiones: numero(process.env.DB_POOL_MAX, 10),
-    zonaHoraria: '-04:00',
+    ssl: process.env.DB_SSL === 'true',
   },
 };
 
