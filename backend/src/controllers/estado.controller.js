@@ -2,7 +2,7 @@ const { config } = require('../config/env');
 const { probarConexion } = require('../config/db');
 const { formatearEnBolivia } = require('../utils/fecha');
 
-function estado(req, res) {
+function obtenerEstado(req, res) {
   res.json({
     ok: true,
     mensaje: 'API del Sistema de Parqueo operativa',
@@ -12,7 +12,7 @@ function estado(req, res) {
   });
 }
 
-async function estadoBd(req, res) {
+async function obtenerEstadoBd(req, res) {
   try {
     await probarConexion();
     res.json({ ok: true, mensaje: 'Conexión a MySQL establecida' });
@@ -25,4 +25,4 @@ async function estadoBd(req, res) {
   }
 }
 
-module.exports = { estado, estadoBd };
+module.exports = { obtenerEstado, obtenerEstadoBd };

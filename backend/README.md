@@ -52,8 +52,8 @@ La API queda disponible en `http://localhost:3000`.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/api/salud` | Estado de la API, entorno y hora de Bolivia. |
-| GET | `/api/salud/bd` | Verifica la conexión con MySQL (responde 503 si no está disponible). |
+| GET | `/api/estado` | Estado de la API, entorno y hora de Bolivia. |
+| GET | `/api/estado/bd` | Verifica la conexión con MySQL (responde 503 si no está disponible). |
 
 Las rutas no existentes responden `404` con un mensaje en español y los errores internos responden `500` sin exponer detalles.
 
