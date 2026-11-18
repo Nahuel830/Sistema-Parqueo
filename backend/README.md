@@ -6,7 +6,7 @@ API REST (JSON) del Sistema de Parqueo. Construida con **Node.js + Express**, **
 
 - Node.js 18 o superior (probado con Node.js 24).
 - npm 9 o superior.
-- MySQL 8 (la base de datos se crea en la actividad del 18 de noviembre).
+- MySQL 8 (o MariaDB 10.4+ como alternativa compatible). El script de la base de datos está incluido en `db/schema.sql`.
 
 ## Instalación
 
@@ -39,6 +39,32 @@ npm install
 
 > El archivo `.env` está en `.gitignore`. Nunca lo subas al repositorio.
 
+## Base de datos
+
+El script `db/schema.sql` crea la base `parqueo_tarija` con las 10 tablas en InnoDB y carga los datos iniciales: los sectores **Plaza Sucre** y **Palacio de Justicia**, con **20 lugares cada uno** (40 en total).
+
+Desde la carpeta `backend`:
+
+```bash
+mysql -u root -p < db/schema.sql
+```
+
+En Windows PowerShell:
+
+```powershell
+Get-Content db\schema.sql -Raw | mysql -u root -p
+```
+
+Si usas MySQL de XAMPP:
+
+```powershell
+C:\xampp\mysql\bin\mysql.exe -u root < db\schema.sql
+```
+
+El script elimina y vuelve a crear las tablas: úsalo solo en desarrollo o cuando quieras reiniciar los datos. Asegúrate de que `DB_NAME` en `.env` coincida con `parqueo_tarija`.
+
+> Las columnas de fecha usan `DATETIME` y se guardan en hora de Bolivia (UTC−4). La reserva de 5 minutos se calculará en el servidor a partir del 19 de noviembre.
+
 ## Ejecución
 
 ```bash
@@ -54,21 +80,25 @@ La API queda disponible en `http://localhost:3000`.
 |---|---|---|
 | GET | `/api/estado` | Estado de la API, entorno y hora de Bolivia. |
 | GET | `/api/estado/bd` | Verifica la conexión con MySQL (responde 503 si no está disponible). |
+| GET | `/api/sectores` | Lista los sectores activos con total y cantidad de lugares libres. |
+| GET | `/api/sectores/:id/lugares` | Devuelve el sector y sus lugares ordenados por número, con estado `LIBRE`, `RESERVADO` u `OCUPADO`. |
 
-Las rutas no existentes responden `404` con un mensaje en español y los errores internos responden `500` sin exponer detalles.
+Las respuestas usan el formato `{ "ok": true, "mensaje": "...", "datos": ... }`. Un sector inexistente responde `404`, un identificador inválido `400`, y si la base de datos no está disponible, `503`. Las rutas no existentes responden `404` con un mensaje en español y los errores internos responden `500` sin exponer detalles.
 
 ## Estructura
 
 ```
 backend/
+├── db/
+│   └── schema.sql            # tablas MySQL/InnoDB y datos iniciales
 ├── postman/                  # colección de pruebas de Postman
 ├── src/
 │   ├── config/               # variables de entorno y pool de MySQL
 │   ├── controllers/          # lógica de cada endpoint
 │   ├── middlewares/          # manejo de errores y 404
-│   ├── models/               # consultas SQL (a partir del 18 nov)
+│   ├── models/               # consultas SQL
 │   ├── routes/               # definición de rutas REST
-│   ├── utils/                # fechas en hora de Bolivia
+│   ├── utils/                # fechas en hora de Bolivia y utilidades
 │   ├── app.js                # configuración de Express
 │   └── server.js             # arranque y cierre del servidor
 ├── .env.example
@@ -82,6 +112,7 @@ Importa `postman/Sistema-Parqueo.postman_collection.json` en Postman. La variabl
 
 ## Pendiente / dependencias del Trío A
 
-- **Script SQL del modelo físico**: el modelo de la rama `modelos-base-de-datos` está escrito con sintaxis PostgreSQL (`SERIAL`, `BOOLEAN`, `now()`). Para este backend se necesita la versión **MySQL/InnoDB** con las 2 tablas semilla de sectores y los 40 lugares.
-- Los endpoints de sectores, lugares, reservas, pagos, fichas y autenticación se agregan en las actividades del 18 al 21 de noviembre.
+- El script SQL del modelo físico fue **convertido a MySQL/InnoDB** en `db/schema.sql`. Si el Trío A entrega su versión definitiva (modelo físico/lógico), hay que comparar y unificar diferencias.
+- Las **tarifas** no se cargaron como dato inicial: las configura el administrador (RF-28). Se necesitará al menos una tarifa activa por sector para crear reservas el 19 de noviembre.
+- Los endpoints de reservas, pagos, fichas y autenticación se agregan en las actividades del 19 al 21 de noviembre.
 - La integración con el frontend se realiza el 22 de noviembre.
