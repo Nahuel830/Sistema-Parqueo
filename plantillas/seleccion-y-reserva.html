@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="es-BO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parqueo Tarija · Selección y reserva</title>
+  <style>body { margin: 0; background: #f3f5f0; }</style>
+  <style>
+    #parqueo-reserva {
+      container: parqueo-pc / inline-size;
+      color-scheme: light;
+      --page: #f3f5f0;
+      --surface: #fff;
+      --ink: #172e27;
+      --muted: #4e6259;
+      --line: #dce5db;
+      --brand: #17473d;
+      --free: #195b43;
+      --free-bg: #ddf2e5;
+      --held: #794a12;
+      --held-bg: #f8ebcf;
+      --busy: #873833;
+      --busy-bg: #f8e6e3;
+      background: var(--page);
+      color: var(--ink);
+      font: 15px/1.4 "Aptos", "Segoe UI", system-ui, sans-serif;
+    }
+
+    #parqueo-reserva *, #parqueo-reserva *::before, #parqueo-reserva *::after { box-sizing: border-box; }
+    :where(#parqueo-reserva) :is(h1, h2, h3, p) { margin: 0; color: inherit; }
+    :where(#parqueo-reserva button) { font: inherit; color: inherit; }
+    #parqueo-reserva [hidden] { display: none !important; }
+    .pk-container { width: min(100% - 28px, 1176px); margin-inline: auto; }
+    .pk-header { background: var(--surface); border-bottom: 1px solid var(--line); }
+    .pk-header .pk-container { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; }
+    .pk-brand { display: flex; align-items: center; gap: 10px; font-weight: 750; font-size: 18px; letter-spacing: -.035em; }
+    .pk-brand-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: var(--brand); color: #fff; font-weight: 740; font-size: 23px; }
+    .pk-location { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .pk-main { padding-block: 14px 28px; }
+    .pk-hero { position: relative; min-width: 0; isolation: isolate; display: flex; align-items: end; flex-wrap: wrap; gap: 12px 20px; justify-content: space-between; overflow: hidden; padding: 20px 18px; border-radius: 16px; background: linear-gradient(114deg, #143d34, #22564a); color: #fff; }
+    .pk-hero::after { position: absolute; z-index: -1; inset: auto -92px -230px auto; width: 405px; height: 405px; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0 18px, #d7ffea21 19px 20px); content: ""; pointer-events: none; }
+    .pk-hero h1 { font-size: clamp(29px, 4.4cqi, 48px); font-weight: 750; line-height: 1.04; letter-spacing: -.05em; }
+    .pk-hero p { margin-top: 7px; color: #e1efe8; font-size: 14px; }
+    .pk-rate { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 10px; border: 1px solid #bcdece62; border-radius: 8px; background: #ffffff13; color: #eaf6ef; font-size: 12px; white-space: nowrap; }
+    .pk-rate strong { color: #fff; font-size: 17px; }
+
+    .pk-overview { display: grid; gap: 14px; margin-top: 14px; align-items: start; }
+    .pk-side { display: contents; }
+    .pk-pane { min-width: 0; padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .pk-pane h2 { font-size: 18px; font-weight: 740; letter-spacing: -.025em; }
+    .pk-side .pk-detail { grid-row: 3; }
+    .pk-sector-list { display: grid; gap: 7px; padding: 0; margin: 10px 0 0; list-style: none; }
+    .pk-sector { display: grid; width: 100%; gap: 3px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); text-align: left; cursor: pointer; }
+    .pk-sector[aria-pressed="true"] { border-color: #76a68f; background: #ecf5ed; }
+    .pk-sector:hover { border-color: #76a68f; }
+    .pk-sector b { font-size: 15px; }
+    .pk-sector span { color: var(--muted); font-size: 12px; }
+
+    .pk-map-header { display: flex; align-items: start; justify-content: space-between; gap: 4px 14px; flex-wrap: wrap; }
+    .pk-map-header h2 { font-size: clamp(22px, 3cqi, 30px); line-height: 1.16; }
+    .pk-map-subtitle { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .pk-demo { color: var(--muted); font-size: 11px; line-height: 1.8; }
+    .pk-filters { display: flex; flex-wrap: wrap; gap: 5px; margin-block: 12px; }
+    .pk-filter { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); font-size: 11px; font-weight: 670; cursor: pointer; }
+    .pk-filter[aria-pressed="true"] { border-color: var(--brand); background: #eaf3ed; color: #183e33; }
+    .pk-filter:hover { border-color: #76a68f; }
+    .pk-filter .pk-symbol { width: 16px; height: 16px; font-size: 12px; }
+    .pk-filter-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    .pk-map { container: parqueo-mapa / inline-size; display: grid; padding: 10px; border: 1px solid #dce6da; border-radius: 10px; background: #e9eee7; }
+    .pk-places { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+    .pk-place { display: grid; align-content: center; justify-items: center; gap: 3px; min-height: 63px; min-width: 0; padding: 3px 0; border: 1.5px solid #fff; border-radius: 6px; background: var(--state-bg); color: var(--state-ink); font-size: 14px; font-weight: 750; line-height: 1.1; font-variant-numeric: tabular-nums; cursor: pointer; }
+    .pk-place:hover:not(:disabled) { border-color: var(--state-ink); }
+    .pk-place[aria-pressed="true"] { border-color: var(--state-ink); box-shadow: inset 0 0 0 1px var(--state-ink); }
+    .pk-place:disabled { cursor: default; opacity: 1; }
+    .pk-place[data-muted="true"] { background: #eff2ed; color: #5f6f64; border-color: #e0e6df; }
+    .pk-place[data-muted="true"] .pk-symbol { visibility: hidden; }
+    .pk-place[aria-pressed="true"] .pk-symbol { background: var(--held); color: #fff; }
+    .pk-lane { display: flex; align-items: center; gap: 10px; min-height: 49px; color: #4f6657; font-size: 11px; font-weight: 640; }
+    .pk-lane::before, .pk-lane::after { flex: 1; min-width: 6px; border-top: 1px dashed #8eaa95; content: ""; }
+
+    #parqueo-reserva [data-status="libre"] { --state-ink: var(--free); --state-bg: var(--free-bg); }
+    #parqueo-reserva [data-status="reservado"] { --state-ink: var(--held); --state-bg: var(--held-bg); }
+    #parqueo-reserva [data-status="ocupado"] { --state-ink: var(--busy); --state-bg: var(--busy-bg); }
+    .pk-symbol { display: inline-grid; width: 20px; height: 20px; flex: none; place-items: center; border-radius: 5px; background: var(--state-bg); color: var(--state-ink); font: 750 14px/1 "Segoe UI Symbol", system-ui, sans-serif; }
+    .pk-place .pk-symbol { background: #fff8; }
+
+    .pk-detail h2 { margin-bottom: 8px; }
+    .pk-detail-spot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; }
+    .pk-detail-spot h3 { font-size: 23px; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .pk-badge { padding: 4px 7px; border-radius: 5px; background: var(--state-bg); color: var(--state-ink); font-size: 11px; font-weight: 750; }
+    .pk-detail-sector { margin-top: 1px; color: var(--muted); font-size: 13px; }
+    .pk-detail-summary { margin-top: 10px; font-size: 13px; line-height: 1.45; }
+    .pk-clock { display: grid; gap: 4px; padding: 12px 14px; margin-top: 10px; border-radius: 10px; background: #eaf2eb; color: #204a3b; }
+    .pk-clock[data-phase="activa"] { background: #17473d; color: #fff; }
+    .pk-clock[data-phase="por-vencer"] { background: #704a18; color: #fff; }
+    .pk-clock[data-phase="vencida"] { background: var(--busy-bg); color: var(--busy); }
+    .pk-clock-label { font-size: 12px; font-weight: 650; }
+    .pk-time { font-size: clamp(36px, 5cqi, 48px); font-weight: 730; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -.045em; }
+    .pk-time-track { height: 4px; margin-top: 5px; overflow: hidden; border-radius: 4px; background: #ffffff45; }
+    .pk-time-fill { display: block; height: 100%; border-radius: inherit; background: #d8f4dc; }
+    .pk-cancel { width: 100%; min-height: 44px; margin-top: 11px; border: 1px solid #dcc3bd; border-radius: 8px; background: #fff; color: #873833; font-size: 13px; font-weight: 680; cursor: pointer; }
+    .pk-cancel:hover { background: #f8e6e3; }
+    .pk-sr { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+    @container parqueo-pc (min-width: 680px) {
+      .pk-container { width: min(100% - 48px, 1176px); }
+      .pk-header .pk-container { min-height: 66px; }
+      .pk-main { padding-block: 20px 34px; }
+      .pk-hero { padding: 26px 28px; }
+      .pk-overview { grid-template-columns: minmax(226px, .36fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+      .pk-side { display: grid; gap: 14px; align-content: start; }
+      .pk-side .pk-detail { grid-row: auto; }
+      .pk-pane { padding: 17px; }
+      .pk-map-pane { padding: 20px; }
+      .pk-filter { padding-inline: 10px; font-size: 12px; }
+      .pk-filters { gap: 7px; margin-block: 15px; }
+      .pk-map { padding: 14px; }
+      .pk-place { min-height: 80px; font-size: 16px; }
+      .pk-lane { min-height: 64px; }
+    }
+
+    @container parqueo-mapa (min-width: 480px) {
+      .pk-places { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 5px; }
+      .pk-place { min-height: 99px; }
+    }
+  </style>
+</head>
+<body>
+<div id="parqueo-reserva">
+  <header class="pk-header">
+    <div class="pk-container">
+      <div class="pk-brand"><span class="pk-brand-icon" aria-hidden="true">P</span> Parqueo Tarija</div>
+      <span class="pk-location">Tarija, Bolivia</span>
+    </div>
+  </header>
+
+  <main class="pk-container pk-main">
+    <section class="pk-hero" aria-labelledby="pk-title">
+      <div>
+        <h1 id="pk-title">Selecciona un lugar</h1>
+        <p>Consulta los espacios disponibles en cada sector.</p>
+      </div>
+      <div class="pk-rate"><strong>2 Bs</strong> por estacionamiento</div>
+    </section>
+
+    <div class="pk-overview">
+      <div class="pk-side">
+        <section class="pk-pane" aria-labelledby="pk-sector-title">
+          <h2 id="pk-sector-title">Sectores de parqueo</h2>
+          <ul class="pk-sector-list" id="pk-sector-list"></ul>
+        </section>
+        <section class="pk-pane pk-detail" id="pk-booking" aria-labelledby="pk-detail-title">
+          <h2 id="pk-detail-title">Tu reserva</h2>
+          <div id="pk-booking-meta" hidden>
+            <div class="pk-detail-spot">
+              <h3 id="pk-booking-place"></h3>
+              <span class="pk-badge" data-status="reservado">Reservado</span>
+            </div>
+            <p class="pk-detail-sector" id="pk-booking-sector"></p>
+          </div>
+          <div class="pk-clock" id="pk-clock">
+            <span class="pk-clock-label" id="pk-clock-label">Duración de la reserva</span>
+            <span class="pk-time" id="pk-clock-time" role="timer" aria-labelledby="pk-clock-label">05:00</span>
+            <div class="pk-time-track" id="pk-clock-track" aria-hidden="true" hidden><span class="pk-time-fill" id="pk-clock-fill"></span></div>
+          </div>
+          <p class="pk-detail-summary" id="pk-booking-summary">El contador empieza al elegir un lugar libre.</p>
+          <button class="pk-cancel" id="pk-cancel" type="button" hidden>Cancelar reserva</button>
+        </section>
+      </div>
+
+      <section class="pk-pane pk-map-pane" aria-labelledby="pk-map-title">
+        <div class="pk-map-header">
+          <div>
+            <h2 id="pk-map-title"></h2>
+            <p class="pk-map-subtitle">20 lugares · Distribución esquemática</p>
+          </div>
+          <span class="pk-demo">Reserva de demostración</span>
+        </div>
+        <div class="pk-filters" id="pk-filters" role="group" aria-label="Filtrar lugares por estado"></div>
+        <div class="pk-map">
+          <div class="pk-places" id="pk-first-row" role="group" aria-label="Lugares 1 al 10"></div>
+          <div class="pk-lane" aria-hidden="true">Carril de circulación</div>
+          <div class="pk-places" id="pk-second-row" role="group" aria-label="Lugares 11 al 20"></div>
+        </div>
+      </section>
+    </div>
+    <p class="pk-sr" id="pk-announcement" role="status"></p>
+  </main>
+</div>
+
+<script>
+  (() => {
+    const root = document.getElementById("parqueo-reserva");
+    const byId = id => root.querySelector("#" + id);
+    const sectors = [
+      { name: "Plaza Sucre", held: [2, 8, 12, 19], busy: [3, 5, 7, 11, 15, 17, 20] },
+      { name: "Palacio de Justicia", held: [1, 6, 18], busy: [2, 4, 5, 7, 8, 10, 12, 13, 14, 16, 19, 20] }
+    ];
+    const statuses = {
+      libre: { label: "Libre", plural: "Libres", symbol: "✓" },
+      reservado: { label: "Reservado", plural: "Reservados", symbol: "◷" },
+      ocupado: { label: "Ocupado", plural: "Ocupados", symbol: "×" }
+    };
+    const capacity = 20;
+    const durationMs = 5 * 60 * 1000;
+    const booking = byId("pk-booking");
+    const cancelButton = byId("pk-cancel");
+    const clock = byId("pk-clock");
+    const time = byId("pk-clock-time");
+    const progress = byId("pk-clock-fill");
+    let sectorIndex = 0;
+    let activeFilter = "todos";
+    let places = [];
+    let reservation = null;
+    let timer;
+    let localChange = false;
+
+    function create(tag, className, text) {
+      const node = document.createElement(tag);
+      node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function symbol(status) {
+      const node = create("span", "pk-symbol", statuses[status].symbol);
+      node.dataset.status = status;
+      node.setAttribute("aria-hidden", "true");
+      return node;
+    }
+
+    function baseStatus(area, number) {
+      if (area.held.includes(number)) return "reservado";
+      if (area.busy.includes(number)) return "ocupado";
+      return "libre";
+    }
+
+    function labelFor(number) {
+      return String(number).padStart(2, "0");
+    }
+
+    function announce(message) {
+      byId("pk-announcement").textContent = message;
+    }
+
+    const filterButtons = new Map();
+    const filters = byId("pk-filters");
+    for (const [key, label] of [["todos", "Todos"], ...Object.entries(statuses).map(([key, value]) => [key, value.plural])]) {
+      const button = create("button", "pk-filter");
+      const count = create("span", "pk-filter-count");
+      button.type = "button";
+      if (key !== "todos") button.append(symbol(key));
+      button.append(label, count);
+      button.addEventListener("click", () => {
+        activeFilter = key;
+        const visible = updateBoard();
+        announce(visible === 1 ? "1 lugar en el filtro." : visible + " lugares en el filtro.");
+      });
+      filters.append(button);
+      filterButtons.set(key, { button, count });
+    }
+
+    const sectorList = byId("pk-sector-list");
+    const sectorButtons = sectors.map((area, index) => {
+      const item = create("li", "");
+      const button = create("button", "pk-sector");
+      const count = create("span", "");
+      button.type = "button";
+      button.append(create("b", "", area.name), count);
+      button.addEventListener("click", () => showSector(index));
+      item.append(button);
+      sectorList.append(item);
+      return { button, count };
+    });
+
+    function updateBoard() {
+      const area = sectors[sectorIndex];
+      const heldHere = reservation?.sectorIndex === sectorIndex;
+      const totals = {
+        libre: capacity - area.held.length - area.busy.length - Number(heldHere),
+        reservado: area.held.length + Number(heldHere),
+        ocupado: area.busy.length
+      };
+      if (totals[activeFilter] === 0) activeFilter = "todos";
+
+      for (const [key, { button, count }] of filterButtons) {
+        const total = key === "todos" ? capacity : totals[key];
+        count.textContent = total;
+        button.disabled = total === 0;
+        button.setAttribute("aria-pressed", String(key === activeFilter));
+      }
+
+      sectorButtons.forEach(({ button, count }, index) => {
+        const { held, busy } = sectors[index];
+        const free = capacity - held.length - busy.length - Number(reservation?.sectorIndex === index);
+        button.setAttribute("aria-pressed", String(index === sectorIndex));
+        count.textContent = free + " de " + capacity + " libres";
+      });
+
+      for (const { button, number, icon } of places) {
+        const own = heldHere && number === reservation.number;
+        const status = own ? "reservado" : baseStatus(area, number);
+        const muted = activeFilter !== "todos" && activeFilter !== status;
+        button.dataset.status = status;
+        button.dataset.muted = String(muted);
+        icon.dataset.status = status;
+        icon.textContent = statuses[status].symbol;
+        button.disabled = muted || status !== "libre" || Boolean(reservation);
+        button.setAttribute("aria-pressed", String(own));
+        const description = own ? "tu reserva" : statuses[status].label;
+        button.setAttribute("aria-label", "Lugar " + labelFor(number) + ", " + description);
+      }
+      return activeFilter === "todos" ? capacity : totals[activeFilter];
+    }
+
+    function showSector(index, announceChange = true) {
+      sectorIndex = index;
+      const area = sectors[index];
+      byId("pk-map-title").textContent = area.name;
+      const firstRow = byId("pk-first-row");
+      const secondRow = byId("pk-second-row");
+      firstRow.replaceChildren();
+      secondRow.replaceChildren();
+      places = Array.from({ length: capacity }, (_, offset) => {
+        const number = offset + 1;
+        const button = create("button", "pk-place");
+        const icon = symbol(baseStatus(area, number));
+        button.type = "button";
+        button.append(icon, create("span", "", labelFor(number)));
+        button.addEventListener("click", () => reserve(number));
+        (offset < capacity / 2 ? firstRow : secondRow).append(button);
+        return { button, number, icon };
+      });
+      updateBoard();
+      if (announceChange) announce(area.name + ". " + sectorButtons[index].count.textContent + ".");
+    }
+
+    function saveReservation() {
+      window.openai?.setWidgetState?.({
+        modelContent: null,
+        privateContent: { reservation }
+      })?.catch(() => {});
+    }
+
+    function showBooking() {
+      byId("pk-booking-place").textContent = "Lugar " + labelFor(reservation.number);
+      byId("pk-booking-sector").textContent = sectors[reservation.sectorIndex].name;
+      byId("pk-booking-meta").hidden = false;
+      byId("pk-clock-label").textContent = "Tiempo restante";
+      byId("pk-clock-track").hidden = false;
+      byId("pk-booking-summary").textContent = "Cuando termine el tiempo, el lugar volverá a estar libre.";
+      cancelButton.hidden = false;
+      updateTimer();
+      if (reservation) timer = window.setInterval(updateTimer, 250);
+    }
+
+    function reserve(number) {
+      if (reservation || baseStatus(sectors[sectorIndex], number) !== "libre") return;
+      localChange = true;
+      reservation = { sectorIndex, number, expiresAt: Date.now() + durationMs };
+      activeFilter = "todos";
+      updateBoard();
+      showBooking();
+      saveReservation();
+      announce("Lugar " + labelFor(number) + " reservado durante 5 minutos.");
+      cancelButton.focus({ preventScroll: true });
+      booking.scrollIntoView({ block: "nearest" });
+    }
+
+    function updateTimer() {
+      if (!reservation) return;
+      const remaining = reservation.expiresAt - Date.now();
+      if (remaining <= 0) {
+        finishReservation("vencida");
+        return;
+      }
+      const seconds = Math.ceil(remaining / 1000);
+      const display = labelFor(Math.floor(seconds / 60)) + ":" + labelFor(seconds % 60);
+      if (time.textContent !== display) time.textContent = display;
+      clock.dataset.phase = seconds <= 60 ? "por-vencer" : "activa";
+      progress.style.width = Math.min(100, (remaining / durationMs) * 100) + "%";
+    }
+
+    function finishReservation(outcome) {
+      if (!reservation) return;
+      const { number, sectorIndex: originalSector } = reservation;
+      const restoreFocus = document.activeElement === cancelButton;
+      window.clearInterval(timer);
+      reservation = null;
+      localChange = true;
+      const expired = outcome === "vencida";
+      const message = expired ? "La reserva venció. El lugar volvió a estar libre." : "Cancelaste la reserva. El lugar volvió a estar libre.";
+      byId("pk-booking-meta").hidden = true;
+      byId("pk-clock-label").textContent = expired ? "Reserva vencida" : "Duración de la reserva";
+      byId("pk-clock-track").hidden = true;
+      byId("pk-booking-summary").textContent = message;
+      time.textContent = expired ? "00:00" : "05:00";
+      clock.dataset.phase = outcome;
+      cancelButton.hidden = true;
+      updateBoard();
+      if (restoreFocus) {
+        const original = originalSector === sectorIndex ? places[number - 1].button : null;
+        const focusTarget = original && !original.disabled ? original : sectorButtons[sectorIndex].button;
+        focusTarget.focus();
+      }
+      saveReservation();
+      announce(message);
+    }
+
+    function restoreReservation(state) {
+      if (localChange || reservation) return;
+      const stored = state?.privateContent?.reservation;
+      if (!stored || !Number.isInteger(stored.sectorIndex) || !Number.isFinite(stored.expiresAt)) return;
+      const remaining = stored.expiresAt - Date.now();
+      const area = sectors[stored.sectorIndex];
+      if (!area || !Number.isInteger(stored.number) || stored.number < 1 || stored.number > capacity ||
+          !Number.isFinite(remaining) || remaining <= 0 || remaining > durationMs ||
+          baseStatus(area, stored.number) !== "libre") return;
+      reservation = stored;
+      showSector(stored.sectorIndex, false);
+      showBooking();
+    }
+
+    cancelButton.addEventListener("click", () => {
+      if (!reservation) return;
+      finishReservation(Date.now() >= reservation.expiresAt ? "vencida" : "cancelada");
+    });
+    document.addEventListener("visibilitychange", updateTimer);
+    window.addEventListener("openai:set_globals", event => restoreReservation(event.detail?.globals?.widgetState));
+    showSector(sectorIndex, false);
+    restoreReservation(window.openai?.widgetState);
+  })();
+</script>
+</body>
+</html>
