@@ -1,6 +1,7 @@
 const { crearApp } = require('./app');
 const { config } = require('./config/env');
 const { cerrarPool } = require('./config/db');
+const { expirarReservasPendientes } = require('./services/reservas.service');
 
 const app = crearApp();
 
@@ -9,6 +10,15 @@ const servidor = app.listen(config.puerto, () => {
     `API del Sistema de Parqueo escuchando en http://localhost:${config.puerto} (${config.entorno}, zona ${config.zonaHoraria})`
   );
 });
+
+// Barrido periódico. Los cinco minutos se calculan en PostgreSQL, no aquí;
+// el barrido solo materializa vencimientos y libera espacios.
+const temporizadorReservas = setInterval(() => {
+  expirarReservasPendientes().catch((error) => {
+    console.error('No se pudieron procesar las expiraciones:', error.message);
+  });
+}, 5000);
+temporizadorReservas.unref();
 
 servidor.on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
@@ -22,6 +32,7 @@ servidor.on('error', (error) => {
 
 async function cerrar(senal) {
   console.log(`\n${senal} recibido: cerrando la API...`);
+  clearInterval(temporizadorReservas);
   servidor.close(async () => {
     try {
       await cerrarPool();
