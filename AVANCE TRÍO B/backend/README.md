@@ -89,12 +89,21 @@ La API queda disponible en `http://localhost:3000`.
 | POST | `/api/reservas` | Reserva un lugar por **5 minutos** (`{ "idLugar": 1, "placa": "1234ABC" }`). Devuelve la reserva y un `tokenReserva`. `409` si el lugar no está libre. |
 | GET | `/api/reservas/:id` | Consulta la reserva (header `x-reserva-token`). Si ya venció la marca como `EXPIRADA` y libera el lugar. |
 | POST | `/api/reservas/:id/cancelar` | Cancela dentro de los 5 minutos (header `x-reserva-token`) y libera el lugar. |
+| POST | `/api/reservas/:id/pago` | El conductor elige el pago (`{ "metodo": "QR" }` o `"EFECTIVO"`, header `x-reserva-token`). QR devuelve `codigoQr` y `referencia`; efectivo emite la ficha. |
+| GET | `/api/reservas/:id/ficha` | El conductor consulta su ficha electrónica (header `x-reserva-token`). |
+| POST | `/api/pagos/qr/confirmar` | Confirmación del banco/pasarela (`{ "referencia": "..." }`, header `x-pasarela-secret`). Emite la ficha y marca el lugar `OCUPADO`. |
 
 **Reservas (19 nov).** El conductor no tiene login: la reserva se identifica con un `tokenReserva` firmado (HMAC con `JWT_SECRET`) que se envía en el header `x-reserva-token`. Un barrido cada 5 segundos expira las reservas vencidas, libera el lugar y registra la cancelación por expiración y la bitácora. Reservar usa transacciones con bloqueo de fila, así que dos conductores no pueden tomar el mismo lugar.
 
 Las respuestas usan el formato `{ "ok": true, "mensaje": "...", "datos": ... }`. Un sector inexistente responde `404`, un identificador inválido `400`, y si la base de datos no está disponible, `503`. Las rutas no existentes responden `404` con un mensaje en español y los errores internos responden `500` sin exponer detalles.
 
 Las consultas usan sentencias parametrizadas de PostgreSQL (`$1`, `$2`) para prevenir inyección SQL.
+
+**Pagos y fichas (20 nov).**
+- **QR:** `POST /api/reservas/:id/pago` crea un pago `PENDIENTE` con `codigoQr` (el frontend lo dibuja como imagen). Cuando el banco confirma (`/api/pagos/qr/confirmar`), el pago pasa a `CONFIRMADO`, la reserva a `PAGADA`, el lugar a `OCUPADO` y se emite la **ficha** con código único (`PQ-XXXXXXXXXXXXXXXX`). La confirmación es idempotente y se rechaza si la reserva ya venció (RF-39).
+- **Efectivo:** se emite la ficha al elegirlo; el pago queda `PENDIENTE` hasta que el encargado cobre (se agrega con el login, 21 nov). Si el conductor cancela o la reserva vence, la ficha se `ANULA` y el pago se `RECHAZA`.
+- Al emitir una ficha se crea una **notificación** para los encargados activos del sector (RF-19, RF-23) y se registra todo en la **bitácora**.
+- **Confirmación de la pasarela simulada:** no hay banco real conectado. La ruta `/api/pagos/qr/confirmar` está protegida con `PASARELA_SECRET` (mínimo 16 caracteres, en el `.env`); si no está definido responde 503.
 
 ## Estructura
 
@@ -126,5 +135,6 @@ Importa `postman/Sistema-Parqueo.postman_collection.json` en Postman. La variabl
 
 - El script SQL del modelo físico fue **convertido a PostgreSQL** en `db/schema.sql`. Si el Trío A entrega su versión definitiva, hay que comparar y unificar diferencias.
 - Las **tarifas** iniciales (3.00 Bs por sector) son un valor de ejemplo cargado en `db/schema.sql`; hay que confirmar el monto real. El administrador podrá cambiarlas (RF-28).
-- Los endpoints de pagos, fichas y autenticación se agregan en las actividades del 20 y 21 de noviembre.
+- **Autenticación** (login de encargado y administrador) y el cobro en efectivo por el encargado se agregan el 21 de noviembre.
+- Falta definir cómo se **libera** un lugar `OCUPADO` cuando el conductor se va (no está en el cronograma ni en los requerimientos).
 - La integración con el frontend se realiza el 22 de noviembre.

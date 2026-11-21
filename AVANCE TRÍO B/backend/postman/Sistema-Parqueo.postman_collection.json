@@ -308,6 +308,198 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Pagos y fichas",
+      "item": [
+        {
+          "name": "Elegir pago por QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metodo\": \"QR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}/pago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}",
+                "pago"
+              ]
+            },
+            "description": "Genera el código QR (queda PENDIENTE hasta que el banco confirme). Guarda la referencia."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 o 200\", () => pm.expect([200, 201]).to.include(pm.response.code));",
+                  "const r = pm.response.json();",
+                  "pm.collectionVariables.set(\"referenciaPago\", r.datos.referencia);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirmar pago QR (pasarela)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-pasarela-secret",
+                "value": "{{pasarelaSecret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"referencia\": \"{{referenciaPago}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pagos/qr/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pagos",
+                "qr",
+                "confirmar"
+              ]
+            },
+            "description": "Simula la confirmación del banco. Requiere el header x-pasarela-secret (PASARELA_SECRET del .env)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Emite la ficha\", () => pm.expect(pm.response.json().datos.ficha.estado).to.eql(\"EMITIDA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Elegir pago en efectivo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metodo\": \"EFECTIVO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}/pago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}",
+                "pago"
+              ]
+            },
+            "description": "Emite la ficha de inmediato; el encargado cobra en el lugar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Ficha emitida\", () => pm.expect(pm.response.json().datos.ficha.estado).to.eql(\"EMITIDA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ver ficha de la reserva",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}/ficha",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}",
+                "ficha"
+              ]
+            },
+            "description": "El conductor vuelve a ver su ficha (RF-15)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -333,6 +525,16 @@
     },
     {
       "key": "tokenReserva",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "referenciaPago",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pasarelaSecret",
       "value": "",
       "type": "string"
     }

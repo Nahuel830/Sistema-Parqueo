@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const { config } = require('../config/env');
 const { tokenDeReserva, tokenValido } = require('../utils/seguridadReserva');
+const { anularPagoYFicha } = require('./pagos.service');
 
 const DURACION_MINUTOS = 5;
 
@@ -79,6 +80,7 @@ async function expirarReservaDelLugar(cliente, idLugar) {
        GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - $2::timestamptz)))::int))`,
     [reserva.id_reserva, reserva.fecha_inicio]
   );
+  await anularPagoYFicha(cliente, reserva.id_reserva);
   await cliente.query(
     `INSERT INTO bitacora (entidad, id_entidad, accion, estado_anterior, estado_nuevo)
      VALUES ('RESERVA', $1, 'EXPIRACION_AUTOMATICA', 'ACTIVA', 'EXPIRADA'),
@@ -216,6 +218,7 @@ async function cancelarReserva(id, token) {
         WHERE id_lugar = $1 AND estado = 'RESERVADO'`,
       [reserva.id_lugar]
     );
+    await anularPagoYFicha(cliente, reserva.id_reserva);
     await cliente.query(
       `INSERT INTO cancelacion (id_reserva, tipo, motivo, segundos_transcurridos)
        VALUES ($1, 'CONDUCTOR', 'Cancelación voluntaria',

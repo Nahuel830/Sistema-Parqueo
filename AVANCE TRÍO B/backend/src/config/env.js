@@ -27,6 +27,11 @@ if (secretoJwt.length < 32) {
   );
 }
 
+const secretoPasarela = process.env.PASARELA_SECRET || '';
+if (secretoPasarela && secretoPasarela.length < 16) {
+  throw new Error('PASARELA_SECRET debe tener al menos 16 caracteres.');
+}
+
 const config = {
   entorno: process.env.NODE_ENV || 'development',
   puerto: numero(process.env.PORT, 3000),
@@ -35,6 +40,10 @@ const config = {
   jwt: {
     secreto: secretoJwt,
     expiracion: process.env.JWT_EXPIRES_IN || '2h',
+  },
+  pasarela: {
+    // Secreto compartido con el banco/pasarela que confirma los pagos QR.
+    secreto: secretoPasarela,
   },
   bcryptRondas: numero(process.env.BCRYPT_ROUNDS, 10),
   bd: {
