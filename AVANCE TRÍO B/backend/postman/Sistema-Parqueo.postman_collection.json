@@ -15,8 +15,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/estado",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "estado"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estado"
+              ]
             },
             "description": "Verifica que la API esté en ejecución."
           },
@@ -40,8 +45,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/estado/bd",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "estado", "bd"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estado",
+                "bd"
+              ]
             },
             "description": "Verifica la conexión con PostgreSQL. Responde 503 mientras la base de datos no esté disponible."
           },
@@ -70,8 +81,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/sectores",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "sectores"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sectores"
+              ]
             },
             "description": "Lista los sectores activos con su total de lugares y lugares libres."
           },
@@ -97,8 +113,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/sectores/{{idSector}}/lugares",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "sectores", "{{idSector}}", "lugares"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sectores",
+                "{{idSector}}",
+                "lugares"
+              ]
             },
             "description": "Devuelve el sector y sus lugares ordenados por número."
           },
@@ -118,6 +141,173 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Reservas",
+      "item": [
+        {
+          "name": "Crear reserva (5 minutos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLugar\": {{idLugar}},\n  \"placa\": \"1234ABC\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas"
+              ]
+            },
+            "description": "Reserva el lugar durante 5 minutos. Guarda idReserva y tokenReserva para las siguientes pruebas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Estado ACTIVA\", () => pm.expect(r.datos.estado).to.eql(\"ACTIVA\"));",
+                  "pm.collectionVariables.set(\"idReserva\", r.datos.id);",
+                  "pm.collectionVariables.set(\"tokenReserva\", r.datos.tokenReserva);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar reserva",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}"
+              ]
+            },
+            "description": "Consulta el estado de la reserva. Requiere el header x-reserva-token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar reserva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}",
+                "cancelar"
+              ]
+            },
+            "description": "Cancela dentro de los 5 minutos y libera el lugar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Queda CANCELADA\", () => pm.expect(pm.response.json().datos.estado).to.eql(\"CANCELADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservar un lugar ya reservado (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLugar\": {{idLugar}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas"
+              ]
+            },
+            "description": "Debe responder 409 si el lugar no está libre."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 o 409\", () => pm.expect([201, 409]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -129,6 +319,21 @@
     {
       "key": "idSector",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "idLugar",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "idReserva",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenReserva",
+      "value": "",
       "type": "string"
     }
   ]

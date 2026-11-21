@@ -179,4 +179,9 @@ SELECT s.id_sector, n.numero, 'LIBRE', TRUE
 
 SELECT setval(pg_get_serial_sequence('lugar', 'id_lugar'), (SELECT MAX(id_lugar) FROM lugar));
 
+-- Tarifa inicial por sector (valor de ejemplo en bolivianos; el administrador
+-- podrá cambiarla, RF-28). Sin una tarifa vigente no se puede crear una reserva.
+INSERT INTO tarifa (id_sector, monto, activo)
+SELECT id_sector, 3.00, TRUE FROM sector;
+
 COMMIT;

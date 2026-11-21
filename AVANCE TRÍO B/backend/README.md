@@ -67,7 +67,7 @@ Luego ejecuta el script sobre esa base:
 
 El script elimina y vuelve a crear las tablas: úsalo solo en desarrollo o cuando quieras reiniciar los datos. Asegúrate de que `DB_NAME` en `.env` coincida con `parqueo_tarija`.
 
-> Las columnas de fecha usan `TIMESTAMPTZ` y se operan en hora de Bolivia (UTC−4). La reserva de 5 minutos se calculará en el servidor a partir del 19 de noviembre.
+> Las columnas de fecha usan `TIMESTAMPTZ` y se operan en hora de Bolivia (UTC−4). La reserva de 5 minutos se calcula en el servidor (PostgreSQL), nunca en el navegador.
 
 ## Ejecución
 
@@ -86,6 +86,11 @@ La API queda disponible en `http://localhost:3000`.
 | GET | `/api/estado/bd` | Verifica la conexión con PostgreSQL (responde 503 si no está disponible). |
 | GET | `/api/sectores` | Lista los sectores activos con total y cantidad de lugares libres. |
 | GET | `/api/sectores/:id/lugares` | Devuelve el sector y sus lugares ordenados por número, con estado `LIBRE`, `RESERVADO` u `OCUPADO`. |
+| POST | `/api/reservas` | Reserva un lugar por **5 minutos** (`{ "idLugar": 1, "placa": "1234ABC" }`). Devuelve la reserva y un `tokenReserva`. `409` si el lugar no está libre. |
+| GET | `/api/reservas/:id` | Consulta la reserva (header `x-reserva-token`). Si ya venció la marca como `EXPIRADA` y libera el lugar. |
+| POST | `/api/reservas/:id/cancelar` | Cancela dentro de los 5 minutos (header `x-reserva-token`) y libera el lugar. |
+
+**Reservas (19 nov).** El conductor no tiene login: la reserva se identifica con un `tokenReserva` firmado (HMAC con `JWT_SECRET`) que se envía en el header `x-reserva-token`. Un barrido cada 5 segundos expira las reservas vencidas, libera el lugar y registra la cancelación por expiración y la bitácora. Reservar usa transacciones con bloqueo de fila, así que dos conductores no pueden tomar el mismo lugar.
 
 Las respuestas usan el formato `{ "ok": true, "mensaje": "...", "datos": ... }`. Un sector inexistente responde `404`, un identificador inválido `400`, y si la base de datos no está disponible, `503`. Las rutas no existentes responden `404` con un mensaje en español y los errores internos responden `500` sin exponer detalles.
 
@@ -104,6 +109,7 @@ backend/
 │   ├── middlewares/          # manejo de errores y 404
 │   ├── models/               # consultas SQL
 │   ├── routes/               # definición de rutas REST
+│   ├── services/             # reglas de negocio (reservas)
 │   ├── utils/                # fechas en hora de Bolivia y utilidades
 │   ├── app.js                # configuración de Express
 │   └── server.js             # arranque y cierre del servidor
@@ -119,6 +125,6 @@ Importa `postman/Sistema-Parqueo.postman_collection.json` en Postman. La variabl
 ## Pendiente / dependencias del Trío A
 
 - El script SQL del modelo físico fue **convertido a PostgreSQL** en `db/schema.sql`. Si el Trío A entrega su versión definitiva, hay que comparar y unificar diferencias.
-- Las **tarifas** no se cargaron como dato inicial: las configura el administrador (RF-28). Se necesitará al menos una tarifa activa por sector para crear reservas el 19 de noviembre.
-- Los endpoints de reservas, pagos, fichas y autenticación se agregan en las actividades del 19 al 21 de noviembre.
+- Las **tarifas** iniciales (3.00 Bs por sector) son un valor de ejemplo cargado en `db/schema.sql`; hay que confirmar el monto real. El administrador podrá cambiarlas (RF-28).
+- Los endpoints de pagos, fichas y autenticación se agregan en las actividades del 20 y 21 de noviembre.
 - La integración con el frontend se realiza el 22 de noviembre.
