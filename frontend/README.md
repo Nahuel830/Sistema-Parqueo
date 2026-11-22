@@ -26,3 +26,11 @@ La vista usa `GET /api/sectores` y `GET /api/sectores/:id/lugares`. Mientras se 
 Al elegir un lugar libre, la vista crea la reserva mediante `POST /api/reservas`. El panel «Tu reserva» muestra el tiempo restante según `fechaExpiracion`. Mientras la reserva está activa, puedes cambiar de sector y seguir viendo el contador. El ID y el token se conservan en la sesión de la pestaña para recuperar la reserva tras recargar.
 
 Al llegar a cero, la vista confirma el estado con `GET /api/reservas/:id` y actualiza el plano cuando finaliza la reserva. Si otro conductor reserva antes el mismo lugar, la API rechaza el intento y la vista vuelve a consultar la disponibilidad.
+
+## Pago y ficha
+
+El panel de reserva muestra el monto y usa `POST /api/reservas/:id/pago` para elegir QR o efectivo. La imagen se genera con el código QR que devuelve la API. El frontend detecta la confirmación consultando `GET /api/reservas/:id/ficha` cada dos segundos mientras espera. La confirmación bancaria corresponde a la pasarela y el backend actual la simula. En efectivo la API emite la ficha para pagar al encargado del sector.
+
+Para usar tu propia imagen, colócala en `public/pagos/qr.png` y define `VITE_QR_IMAGEN=/pagos/qr.png` en `.env.local`. Reinicia Vite o vuelve a compilar. Puedes reemplazar el archivo manteniendo ese nombre o cambiar la variable para indicar otra ruta. Una imagen fija solo sirve para confirmar un pago si la pasarela puede relacionarlo con la reserva que inició la API.
+
+«Volver a ver ficha» vuelve a consultar el estado de la ficha. El navegador guarda las referencias de las fichas para poder abrirlas en una visita posterior mientras sigan vigentes.

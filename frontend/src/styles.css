@@ -73,6 +73,7 @@ button:focus-visible { outline: 3px solid #226654; outline-offset: 3px; }
   border-color: #86ae9c;
   box-shadow: 0 4px 12px #133b2c20;
 }
+.panel-reserva[data-ampliado='true'] { position: static; }
 .sectores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
 .sector { display: grid; align-content: center; gap: 4px; width: 100%; height: 100%; min-height: 63px; padding: 9px 11px; border: 1px solid var(--borde); border-radius: 9px; background: #fff; text-align: start; }
 .sector:hover, .sector[aria-pressed='true'] { border-color: #527e6c; }
@@ -126,6 +127,28 @@ button:focus-visible { outline: 3px solid #226654; outline-offset: 3px; }
 .reloj-reserva[data-fase='por-vencer'] { background: #704a18; }
 .reloj-reserva[data-fase='verificando'] { background: #f8e6e3; color: #873833; }
 .tiempo-reserva { font-size: 2rem; font-weight: 750; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+
+.detalle-pago {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--borde);
+}
+.monto-pago { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
+.monto-pago span, .datos-ficha dt { color: var(--secundario); font-size: .875rem; }
+.monto-pago strong { color: var(--marca); font-size: 1.125rem; }
+.accion-principal { border-color: var(--marca); background: var(--marca); color: #fff; }
+.accion-principal:hover:enabled { background: #226052; }
+.detalle-pago .accion { overflow-wrap: anywhere; }
+.detalle-pago .accion:disabled { opacity: .7; cursor: default; }
+.imagen-qr { display: block; justify-self: center; width: min(100%, 184px); aspect-ratio: 1; object-fit: contain; border: 1px solid var(--borde); border-radius: 9px; background: #fff; }
+.datos-ficha { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin: 0; }
+.datos-ficha dd { margin: 3px 0 0; font-size: .9375rem; font-weight: 700; overflow-wrap: anywhere; }
+.codigo-ficha, .fecha-ficha { grid-column: 1 / -1; }
+.codigo-ficha { padding: 8px; border-radius: 8px; background: #eaf4ec; }
+.codigo-ficha dd { color: var(--marca); font-family: ui-monospace, monospace; }
 
 @media (min-width: 760px) {
   .distribucion {
