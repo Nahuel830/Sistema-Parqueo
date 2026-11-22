@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { listarLugares } from './api.js';
 
-export function useDisponibilidad(idSector) {
+export function useDisponibilidad(idSector, revision) {
   const [vista, setVista] = useState({
     lugares: null,
     estado: 'cargando',
-    idElegido: null,
-    seleccionPerdida: false,
+    revision,
   });
 
   useEffect(() => {
@@ -24,19 +23,9 @@ export function useDisponibilidad(idSector) {
         const lugares = await listarLugares(idSector, controlador.signal);
         if (!activo) return;
 
-        setVista((anterior) => {
-          const perdioLugar = anterior.idElegido !== null && !lugares.some(
-            (lugar) => lugar.id === anterior.idElegido && lugar.estado === 'LIBRE',
-          );
-          return {
-            lugares,
-            estado: 'actualizado',
-            idElegido: perdioLugar ? null : anterior.idElegido,
-            seleccionPerdida: perdioLugar || anterior.seleccionPerdida,
-          };
-        });
+        setVista({ lugares, estado: 'actualizado', revision });
       } catch {
-        if (activo) setVista((anterior) => ({ ...anterior, estado: 'sin-datos' }));
+        if (activo) setVista((anterior) => ({ ...anterior, estado: 'sin-datos', revision }));
       } finally {
         clearTimeout(limite);
         peticion = null;
@@ -56,20 +45,7 @@ export function useDisponibilidad(idSector) {
       document.removeEventListener('visibilitychange', actualizar);
       window.removeEventListener('online', actualizar);
     };
-  }, [idSector]);
+  }, [idSector, revision]);
 
-  function seleccionar(id) {
-    setVista((anterior) => {
-      if (anterior.idElegido === id) {
-        return { ...anterior, idElegido: null, seleccionPerdida: false };
-      }
-      if (anterior.estado !== 'actualizado' || !anterior.lugares.some(
-        (lugar) => lugar.id === id && lugar.estado === 'LIBRE',
-      )) return anterior;
-
-      return { ...anterior, idElegido: id, seleccionPerdida: false };
-    });
-  }
-
-  return { ...vista, seleccionar };
+  return { lugares: vista.lugares, estado: vista.revision === revision ? vista.estado : 'cargando' };
 }

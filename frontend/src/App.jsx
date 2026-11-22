@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { listarSectores } from './api.js';
 import { useDisponibilidad } from './useDisponibilidad.js';
+import { useReserva } from './useReserva.js';
 
 const estados = {
   LIBRE: { texto: 'Libre', simbolo: '✓' },
@@ -22,9 +23,13 @@ function Simbolo({ estado }) {
   return <span className="simbolo" aria-hidden="true">{estados[estado].simbolo}</span>;
 }
 
-function PlanoSector({ sector }) {
-  const { lugares, estado, idElegido, seleccionPerdida, seleccionar } = useDisponibilidad(sector.id);
-  const elegido = lugares?.find((lugar) => lugar.id === idElegido);
+function PlanoSector({ sector, gestionReserva }) {
+  const { reserva, guardando, revision, reservar } = gestionReserva;
+  const { lugares: disponibles, estado } = useDisponibilidad(sector.id, revision);
+  const idReservado = reserva?.idSector === sector.id ? reserva.idLugar : null;
+  const lugares = disponibles?.map((lugar) => (
+    lugar.id === idReservado && lugar.estado === 'LIBRE' ? { ...lugar, estado: 'RESERVADO' } : lugar
+  ));
   const mitad = Math.ceil((lugares?.length ?? 0) / 2);
 
   function renderLugar(lugar) {
@@ -35,10 +40,10 @@ function PlanoSector({ sector }) {
         key={lugar.id}
         type="button"
         data-estado={lugar.estado}
-        aria-label={`Lugar ${numero}, ${estados[lugar.estado].texto}`}
-        aria-pressed={lugar.id === idElegido}
-        disabled={lugar.estado !== 'LIBRE' || estado !== 'actualizado'}
-        onClick={() => seleccionar(lugar.id)}
+        aria-label={`Lugar ${numero}, ${lugar.id === idReservado ? 'tu reserva' : estados[lugar.estado].texto}`}
+        aria-pressed={lugar.id === idReservado}
+        disabled={lugar.estado !== 'LIBRE' || estado !== 'actualizado' || guardando || Boolean(reserva)}
+        onClick={() => reservar(lugar, sector)}
       >
         <strong>{numero}</strong>
         <Simbolo estado={lugar.estado} />
@@ -47,78 +52,82 @@ function PlanoSector({ sector }) {
   }
 
   return (
-    <>
-      <section className="panel panel-plano" aria-labelledby="titulo-plano">
-        <div className="encabezado-plano">
-          <div>
-            <h2 id="titulo-plano">{sector.nombre}</h2>
-            <p className="subtitulo">{lugares?.length ?? sector.totalLugares} lugares · Plano esquemático</p>
-          </div>
-          <span className="actualizacion" data-actualizacion={estado} role="status">
-            {etiquetasDisponibilidad[estado]}
-          </span>
+    <section className="panel panel-plano" aria-labelledby="titulo-plano">
+      <div className="encabezado-plano">
+        <div>
+          <h2 id="titulo-plano">{sector.nombre}</h2>
+          <p className="subtitulo">{lugares?.length ?? sector.totalLugares} lugares · Plano esquemático</p>
         </div>
+        <span className="actualizacion" data-actualizacion={estado} role="status">
+          {etiquetasDisponibilidad[estado]}
+        </span>
+      </div>
 
-        {estado === 'cargando' && <p className="mensaje">Cargando lugares…</p>}
-        {estado === 'sin-datos' && (
-          <p className="mensaje" role="status">No se pudo actualizar la disponibilidad. Reintentando…</p>
-        )}
-        {lugares?.length === 0 && <p className="mensaje">Este sector no tiene lugares activos.</p>}
+      {estado === 'cargando' && !lugares && <p className="mensaje">Cargando lugares…</p>}
+      {estado === 'sin-datos' && (
+        <p className="mensaje" role="status">No se pudo actualizar la disponibilidad. Reintentando…</p>
+      )}
+      {lugares?.length === 0 && <p className="mensaje">Este sector no tiene lugares activos.</p>}
 
-        {lugares && lugares.length > 0 && (
-          <>
-            <ul className="leyenda" aria-label="Estados de los lugares">
-              {Object.entries(estados).map(([estadoLugar, { texto }]) => (
-                <li key={estadoLugar} data-estado={estadoLugar}>
-                  <Simbolo estado={estadoLugar} />
-                  {texto}
-                  <strong>{lugares.filter((lugar) => lugar.estado === estadoLugar).length}</strong>
-                </li>
-              ))}
-            </ul>
-            <div className="plano">
-              <div className="lugares">{lugares.slice(0, mitad).map(renderLugar)}</div>
-              <div className="carril" aria-hidden="true">Carril de circulación</div>
-              <div className="lugares">{lugares.slice(mitad).map(renderLugar)}</div>
-            </div>
-          </>
-        )}
-      </section>
+      {lugares && lugares.length > 0 && (
+        <>
+          <ul className="leyenda" aria-label="Estados de los lugares">
+            {Object.entries(estados).map(([estadoLugar, { texto }]) => (
+              <li key={estadoLugar} data-estado={estadoLugar}>
+                <Simbolo estado={estadoLugar} />
+                {texto}
+                <strong>{lugares.filter((lugar) => lugar.estado === estadoLugar).length}</strong>
+              </li>
+            ))}
+          </ul>
+          <div className="plano">
+            <div className="lugares">{lugares.slice(0, mitad).map(renderLugar)}</div>
+            <div className="carril" aria-hidden="true">Carril de circulación</div>
+            <div className="lugares">{lugares.slice(mitad).map(renderLugar)}</div>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
 
-      <section className="panel panel-seleccion" aria-labelledby="titulo-seleccion">
-        <h2 id="titulo-seleccion">Tu selección</h2>
+function PanelReserva({ gestionReserva, idSectorVisible }) {
+  const { reserva, segundos, guardando, aviso } = gestionReserva;
+  const reloj = `${numeroLugar(Math.floor(segundos / 60))}:${numeroLugar(segundos % 60)}`;
+  const fase = segundos === 0 ? 'verificando' : segundos <= 60 ? 'por-vencer' : 'activa';
+
+  return (
+    <section className="panel panel-reserva" data-activa={Boolean(reserva)} aria-labelledby="titulo-reserva">
+      <div>
+        <h2 id="titulo-reserva">Tu reserva</h2>
         <div role="status">
-          {elegido ? (
-            <div className="seleccion">
-              <span className="numero-seleccion" aria-hidden="true">{numeroLugar(elegido.numero)}</span>
-              <div>
-                <strong>Lugar {numeroLugar(elegido.numero)}</strong>
-                <p>{sector.nombre}</p>
-              </div>
+          {reserva ? (
+            <div className="reserva-lugar">
+              <strong>Lugar {numeroLugar(reserva.numero)}</strong>
+              {idSectorVisible !== reserva.idSector && <p className="subtitulo">{reserva.nombreSector}</p>}
+              {segundos === 0 && <p className="subtitulo">Verificando vencimiento…</p>}
             </div>
           ) : (
-            <p className="subtitulo">
-              {seleccionPerdida
-                ? 'El lugar seleccionado ya no está disponible. Elige otro lugar libre.'
-                : 'Selecciona un lugar libre en el plano.'}
-            </p>
+            <p className="subtitulo">{guardando ? 'Reservando el lugar…' : aviso || 'Selecciona un lugar libre en el plano.'}</p>
           )}
         </div>
-        {elegido && (
-          <button className="accion quitar" type="button" onClick={() => seleccionar(elegido.id)}>
-            Quitar selección
-          </button>
-        )}
-      </section>
-    </>
+      </div>
+      {reserva && (
+        <div className="reloj-reserva" data-fase={fase}>
+          <span id="etiqueta-reloj">Tiempo restante</span>
+          <span className="tiempo-reserva" role="timer" aria-labelledby="etiqueta-reloj">{reloj}</span>
+        </div>
+      )}
+    </section>
   );
 }
 
 export default function App() {
+  const gestionReserva = useReserva();
   const [sectores, setSectores] = useState(null);
   const [error, setError] = useState(false);
   const [intento, setIntento] = useState(0);
-  const [idSector, setIdSector] = useState(null);
+  const [idSector, setIdSector] = useState(() => gestionReserva.reserva?.idSector ?? null);
 
   useEffect(() => {
     const peticion = new AbortController();
@@ -183,7 +192,10 @@ export default function App() {
               </ul>
             )}
           </section>
-          {sector && <PlanoSector key={sector.id} sector={sector} />}
+          {(sector || gestionReserva.reserva) && (
+            <PanelReserva gestionReserva={gestionReserva} idSectorVisible={sector?.id} />
+          )}
+          {sector && <PlanoSector key={sector.id} sector={sector} gestionReserva={gestionReserva} />}
         </div>
       </main>
     </>

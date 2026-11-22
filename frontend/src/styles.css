@@ -47,7 +47,7 @@ button:focus-visible { outline: 3px solid #226654; outline-offset: 3px; }
 
 .distribucion {
   display: grid;
-  grid-template-areas: 'sectores' 'plano' 'seleccion';
+  grid-template-areas: 'sectores' 'reserva' 'plano';
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   margin-top: 16px;
@@ -58,7 +58,21 @@ button:focus-visible { outline: 3px solid #226654; outline-offset: 3px; }
 .panel h2 { font-size: 1.125rem; line-height: 1.2; letter-spacing: -.026em; }
 .panel-sectores { grid-area: sectores; }
 .panel-plano { grid-area: plano; }
-.panel-seleccion { grid-area: seleccion; }
+.panel-reserva {
+  grid-area: reserva;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.panel-reserva[data-activa='true'] {
+  position: sticky;
+  top: 8px;
+  z-index: 1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  border-color: #86ae9c;
+  box-shadow: 0 4px 12px #133b2c20;
+}
 .sectores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
 .sector { display: grid; align-content: center; gap: 4px; width: 100%; height: 100%; min-height: 63px; padding: 9px 11px; border: 1px solid var(--borde); border-radius: 9px; background: #fff; text-align: start; }
 .sector:hover, .sector[aria-pressed='true'] { border-color: #527e6c; }
@@ -95,14 +109,27 @@ button:focus-visible { outline: 3px solid #226654; outline-offset: 3px; }
 .mensaje { display: grid; justify-items: start; gap: 8px; margin-top: 12px; color: var(--secundario); font-size: .9375rem; }
 .accion { min-height: 44px; padding: 5px 12px; border: 1px solid #85a498; border-radius: 8px; background: #fff; color: var(--marca); font-size: .875rem; font-weight: 700; }
 .accion:hover { background: #ebf4ed; }
-.seleccion { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-.seleccion p { margin-top: 2px; color: var(--secundario); font-size: .875rem; }
-.numero-seleccion { display: grid; width: 42px; height: 42px; flex: none; place-items: center; border-radius: 9px; background: #ddf2e5; color: #195b43; font-weight: 750; }
-.quitar { margin-top: 12px; }
+.reserva-lugar { margin-top: 5px; }
+.reloj-reserva {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-width: 92px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--marca);
+  color: #fff;
+  font-size: .8125rem;
+  font-weight: 650;
+  text-align: center;
+}
+.reloj-reserva[data-fase='por-vencer'] { background: #704a18; }
+.reloj-reserva[data-fase='verificando'] { background: #f8e6e3; color: #873833; }
+.tiempo-reserva { font-size: 2rem; font-weight: 750; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
 
 @media (min-width: 760px) {
   .distribucion {
-    grid-template-areas: 'sectores plano' 'seleccion plano';
+    grid-template-areas: 'sectores plano' 'reserva plano';
     grid-template-columns: minmax(215px, 255px) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     gap: 16px;
