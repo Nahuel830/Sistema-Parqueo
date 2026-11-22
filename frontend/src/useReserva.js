@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { consultarReserva, crearReserva } from './api.js';
 
 const claveReserva = 'parqueo-tarija:reserva';
@@ -45,8 +45,19 @@ export function useReserva() {
   const [segundos, setSegundos] = useState(() => segundosRestantes(reserva));
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState('');
+  const [cierre, setCierre] = useState(null);
   const [revision, setRevision] = useState(0);
+  const [consulta, setConsulta] = useState(0);
   const creando = useRef(false);
+  const consultarEstado = useCallback(() => setConsulta((actual) => actual + 1), []);
+
+  const cerrarReserva = useCallback((id, estado, mensaje) => {
+    guardarReserva(null);
+    setReserva(null);
+    setCierre({ id, estado });
+    setAviso(mensaje);
+    setRevision((actual) => actual + 1);
+  }, []);
 
   useEffect(() => {
     if (!reserva) return;
@@ -57,13 +68,6 @@ export function useReserva() {
 
     function actualizarReloj() {
       setSegundos(segundosRestantes(reserva));
-    }
-
-    function cerrarReserva(mensaje) {
-      guardarReserva(null);
-      setReserva(null);
-      setAviso(mensaje);
-      setRevision((actual) => actual + 1);
     }
 
     async function verificarReserva() {
@@ -78,13 +82,13 @@ export function useReserva() {
         const datos = await consultarReserva(reserva.id, reserva.tokenReserva, controlador.signal);
         if (!activo) return;
         if (avisosDeCierre[datos.estado]) {
-          cerrarReserva(avisosDeCierre[datos.estado]);
+          cerrarReserva(reserva.id, datos.estado, avisosDeCierre[datos.estado]);
           return;
         }
       } catch (error) {
         if (!activo) return;
         if (error.status === 403 || error.status === 404) {
-          cerrarReserva('La reserva ya no está disponible.');
+          cerrarReserva(reserva.id, 'NO_DISPONIBLE', 'La reserva ya no está disponible.');
           return;
         }
       } finally {
@@ -113,13 +117,14 @@ export function useReserva() {
       document.removeEventListener('visibilitychange', alVolver);
       window.removeEventListener('online', alVolver);
     };
-  }, [reserva]);
+  }, [reserva, consulta, cerrarReserva]);
 
   async function reservar(lugar, sector) {
     if (creando.current || reserva) return;
     creando.current = true;
     setGuardando(true);
     setAviso('');
+    setCierre(null);
 
     const controlador = new AbortController();
     const limite = setTimeout(() => controlador.abort(), 10000);
@@ -148,5 +153,5 @@ export function useReserva() {
     }
   }
 
-  return { reserva, segundos, guardando, aviso, revision, reservar };
+  return { reserva, segundos, guardando, aviso, cierre, revision, reservar, consultarEstado };
 }

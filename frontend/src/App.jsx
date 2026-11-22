@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { listarSectores } from './api.js';
 import { useDisponibilidad } from './useDisponibilidad.js';
 import { useReserva } from './useReserva.js';
+import { usePago } from './usePago.js';
+import PanelPago from './PanelPago.jsx';
 
 const estados = {
   LIBRE: { texto: 'Libre', simbolo: '✓' },
@@ -91,16 +93,17 @@ function PlanoSector({ sector, gestionReserva }) {
   );
 }
 
-function PanelReserva({ gestionReserva, idSectorVisible }) {
+function PanelReserva({ gestionReserva, gestionPago, idSectorVisible }) {
   const { reserva, segundos, guardando, aviso } = gestionReserva;
+  const viendoFicha = Boolean(gestionPago.fichaVisible);
   const reloj = `${numeroLugar(Math.floor(segundos / 60))}:${numeroLugar(segundos % 60)}`;
   const fase = segundos === 0 ? 'verificando' : segundos <= 60 ? 'por-vencer' : 'activa';
 
   return (
-    <section className="panel panel-reserva" data-activa={Boolean(reserva)} aria-labelledby="titulo-reserva">
+    <section className="panel panel-reserva" data-activa={Boolean(reserva)} data-ampliado={viendoFicha || Boolean(gestionPago.qr)} aria-labelledby="titulo-reserva">
       <div>
-        <h2 id="titulo-reserva">Tu reserva</h2>
-        <div role="status">
+        <h2 id="titulo-reserva">{viendoFicha ? 'Ficha electrónica' : 'Tu reserva'}</h2>
+        {!viendoFicha && <div role="status">
           {reserva ? (
             <div className="reserva-lugar">
               <strong>Lugar {numeroLugar(reserva.numero)}</strong>
@@ -110,7 +113,7 @@ function PanelReserva({ gestionReserva, idSectorVisible }) {
           ) : (
             <p className="subtitulo">{guardando ? 'Reservando el lugar…' : aviso || 'Selecciona un lugar libre en el plano.'}</p>
           )}
-        </div>
+        </div>}
       </div>
       {reserva && (
         <div className="reloj-reserva" data-fase={fase}>
@@ -118,12 +121,15 @@ function PanelReserva({ gestionReserva, idSectorVisible }) {
           <span className="tiempo-reserva" role="timer" aria-labelledby="etiqueta-reloj">{reloj}</span>
         </div>
       )}
+      <PanelPago gestionPago={gestionPago} reserva={reserva} segundos={segundos} />
     </section>
   );
 }
 
 export default function App() {
   const gestionReserva = useReserva();
+  const { reserva, cierre, consultarEstado } = gestionReserva;
+  const gestionPago = usePago(reserva, cierre, consultarEstado);
   const [sectores, setSectores] = useState(null);
   const [error, setError] = useState(false);
   const [intento, setIntento] = useState(0);
@@ -192,8 +198,8 @@ export default function App() {
               </ul>
             )}
           </section>
-          {(sector || gestionReserva.reserva) && (
-            <PanelReserva gestionReserva={gestionReserva} idSectorVisible={sector?.id} />
+          {(sector || reserva || gestionPago.fichas.length > 0) && (
+            <PanelReserva gestionReserva={gestionReserva} gestionPago={gestionPago} idSectorVisible={sector?.id} />
           )}
           {sector && <PlanoSector key={sector.id} sector={sector} gestionReserva={gestionReserva} />}
         </div>

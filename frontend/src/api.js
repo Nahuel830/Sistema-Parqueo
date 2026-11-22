@@ -36,3 +36,15 @@ export function consultarReserva(id, tokenReserva, signal) {
   return solicitar(`/reservas/${id}`, { headers: { 'x-reserva-token': tokenReserva }, signal });
 }
 
+export function iniciarPago({ id, tokenReserva }, metodo, signal) {
+  return solicitar(`/reservas/${id}/pago`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-reserva-token': tokenReserva },
+    body: JSON.stringify({ metodo }),
+    signal,
+  });
+}
+
+export function consultarFicha({ id, tokenReserva }, signal) {
+  return solicitar(`/reservas/${id}/ficha`, { headers: { 'x-reserva-token': tokenReserva }, signal });
+}
