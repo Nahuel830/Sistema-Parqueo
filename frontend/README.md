@@ -1,0 +1,24 @@
+# Frontend público de Parqueo Tarija
+
+Vista pública con React, Vite, JSX y CSS para elegir un sector, consultar el plano esquemático y seleccionar un lugar libre.
+
+## Desarrollo local
+
+1. Arranca PostgreSQL y la API existente según el [README del backend](../AVANCE%20TR%C3%8DO%20B/backend/README.md).
+2. Desde la raíz del repositorio, con Node.js 20.19+ en la rama 20 o 22.12+:
+
+   ```powershell
+   cd frontend
+   npm.cmd ci
+   npm.cmd run dev
+   ```
+
+3. Abre la URL que indica Vite, normalmente `http://localhost:5173`.
+
+Vite redirige `/api` a `http://127.0.0.1:3000` durante el desarrollo y la vista previa. Para otro puerto, copia `.env.example` a `.env.local` y ajusta `API_PROXY_TARGET`. Ejecuta `npm.cmd run build` para generar `dist/`. En producción, sirve `/api` desde el mismo origen o establece `VITE_API_URL` antes de compilar y configura el origen permitido en el servidor que ya aloja la API.
+
+## Disponibilidad
+
+La vista usa `GET /api/sectores` y `GET /api/sectores/:id/lugares`. Mientras se muestra el plano, consulta una vez por segundo el sector activo, con una sola solicitud a la vez. Al volver a la pestaña actualiza el plano. Si falla la consulta, conserva la última vista y pausa la selección hasta recuperar datos actuales. La latencia depende de la API, la red y el navegador.
+
+La selección se guarda en la vista. La creación de una reserva de cinco minutos corresponde a RF-06.
