@@ -143,6 +143,10 @@ button:focus-visible { outline: 3px solid #226654; outline-offset: 3px; }
 .accion-principal:hover:enabled { background: #226052; }
 .detalle-pago .accion { overflow-wrap: anywhere; }
 .detalle-pago .accion:disabled { opacity: .7; cursor: default; }
+.accion-cancelar, .aviso-reserva { grid-column: 1 / -1; }
+.accion-cancelar { border-color: #bb8c87; color: #873833; }
+.accion-cancelar:hover:enabled { background: #f8e6e3; }
+.accion-cancelar:disabled { opacity: .7; cursor: default; }
 .imagen-qr { display: block; justify-self: center; width: min(100%, 184px); aspect-ratio: 1; object-fit: contain; border: 1px solid var(--borde); border-radius: 9px; background: #fff; }
 .datos-ficha { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin: 0; }
 .datos-ficha dd { margin: 3px 0 0; font-size: .9375rem; font-weight: 700; overflow-wrap: anywhere; }

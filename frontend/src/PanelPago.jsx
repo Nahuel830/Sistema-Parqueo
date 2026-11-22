@@ -45,7 +45,7 @@ function Ficha({ datos, ocultar }) {
   );
 }
 
-export default function PanelPago({ gestionPago, reserva, segundos }) {
+export default function PanelPago({ gestionPago, reserva, segundos, cancelando }) {
   const { fichaVisible, fichas, qr, ocupado, aviso, pagar, ocultarFicha, volverAVer } = gestionPago;
   const fichasConsultables = reserva ? fichas.filter(({ id }) => id === reserva.id) : fichas;
   const puedePagar = reserva && segundos > 0 && fichasConsultables.length === 0;
@@ -67,15 +67,15 @@ export default function PanelPago({ gestionPago, reserva, segundos }) {
               <p className="subtitulo" role="status">Esperando confirmación del pago por QR.</p>
             </>
           ) : (
-            <button className="accion accion-principal" type="button" disabled={ocupado} onClick={() => pagar('QR')}>Pagar por QR</button>
+            <button className="accion accion-principal" type="button" disabled={ocupado || cancelando} onClick={() => pagar('QR')}>Pagar por QR</button>
           )}
-          <button className="accion" type="button" disabled={ocupado} onClick={() => pagar('EFECTIVO')}>Pagar en efectivo</button>
+          <button className="accion" type="button" disabled={ocupado || cancelando} onClick={() => pagar('EFECTIVO')}>Pagar en efectivo</button>
         </>
       )}
       {ocupado && <p className="subtitulo" role="status">Consultando…</p>}
       {aviso && <p className="subtitulo" role="status">{aviso}</p>}
       {fichasConsultables.map((credencial) => (
-        <button className="accion" key={credencial.id} type="button" disabled={ocupado} onClick={() => volverAVer(credencial)}>
+        <button className="accion" key={credencial.id} type="button" disabled={ocupado || cancelando} onClick={() => volverAVer(credencial)}>
           {fichasConsultables.length === 1 ? 'Volver a ver ficha' : `Ver ficha ${credencial.codigo}`}
         </button>
       ))}

@@ -27,6 +27,8 @@ Al elegir un lugar libre, la vista crea la reserva mediante `POST /api/reservas`
 
 Al llegar a cero, la vista confirma el estado con `GET /api/reservas/:id` y actualiza el plano cuando finaliza la reserva. Si otro conductor reserva antes el mismo lugar, la API rechaza el intento y la vista vuelve a consultar la disponibilidad.
 
+Durante los cinco minutos, «Cancelar reserva» solicita la liberación mediante `POST /api/reservas/:id/cancelar`. En cuanto la API responde, se actualizan el contador y el plano sin recargar la pantalla.
+
 ## Pago y ficha
 
 El panel de reserva muestra el monto y usa `POST /api/reservas/:id/pago` para elegir QR o efectivo. La imagen se genera con el código QR que devuelve la API. El frontend detecta la confirmación consultando `GET /api/reservas/:id/ficha` cada dos segundos mientras espera. La confirmación bancaria corresponde a la pasarela y el backend actual la simula. En efectivo la API emite la ficha para pagar al encargado del sector.
