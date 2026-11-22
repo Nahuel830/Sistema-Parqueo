@@ -21,4 +21,8 @@ Vite redirige `/api` a `http://127.0.0.1:3000` durante el desarrollo y la vista 
 
 La vista usa `GET /api/sectores` y `GET /api/sectores/:id/lugares`. Mientras se muestra el plano, consulta una vez por segundo el sector activo, con una sola solicitud a la vez. Al volver a la pestaña actualiza el plano. Si falla la consulta, conserva la última vista y pausa la selección hasta recuperar datos actuales. La latencia depende de la API, la red y el navegador.
 
-La selección se guarda en la vista. La creación de una reserva de cinco minutos corresponde a RF-06.
+## Reserva y contador
+
+Al elegir un lugar libre, la vista crea la reserva mediante `POST /api/reservas`. El panel «Tu reserva» muestra el tiempo restante según `fechaExpiracion`. Mientras la reserva está activa, puedes cambiar de sector y seguir viendo el contador. El ID y el token se conservan en la sesión de la pestaña para recuperar la reserva tras recargar.
+
+Al llegar a cero, la vista confirma el estado con `GET /api/reservas/:id` y actualiza el plano cuando finaliza la reserva. Si otro conductor reserva antes el mismo lugar, la API rechaza el intento y la vista vuelve a consultar la disponibilidad.
