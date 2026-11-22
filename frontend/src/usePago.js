@@ -145,6 +145,10 @@ export function usePago(reserva, cierre, consultarEstado) {
     if (!cierre || !['EXPIRADA', 'CANCELADA', 'NO_DISPONIBLE'].includes(cierre.estado)) return;
     // Al cerrarse la reserva se deja de mostrar una ficha que ya puede haber sido anulada.
     setFichaVisible((visible) => visible?.id === cierre.id ? null : visible);
+    if (cierre.estado === 'CANCELADA') {
+      conservarFicha({ id: cierre.id }, null);
+      setPagos((anterior) => retirarFicha(anterior, cierre.id));
+    }
   }, [cierre]);
 
   useEffect(() => {

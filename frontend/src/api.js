@@ -36,6 +36,14 @@ export function consultarReserva(id, tokenReserva, signal) {
   return solicitar(`/reservas/${id}`, { headers: { 'x-reserva-token': tokenReserva }, signal });
 }
 
+export function cancelarReserva({ id, tokenReserva }, signal) {
+  return solicitar(`/reservas/${id}/cancelar`, {
+    method: 'POST',
+    headers: { 'x-reserva-token': tokenReserva },
+    signal,
+  });
+}
+
 export function iniciarPago({ id, tokenReserva }, metodo, signal) {
   return solicitar(`/reservas/${id}/pago`, {
     method: 'POST',

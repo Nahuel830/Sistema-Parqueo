@@ -26,7 +26,7 @@ function Simbolo({ estado }) {
 }
 
 function PlanoSector({ sector, gestionReserva }) {
-  const { reserva, guardando, revision, reservar } = gestionReserva;
+  const { reserva, guardando, cancelando, revision, reservar } = gestionReserva;
   const { lugares: disponibles, estado } = useDisponibilidad(sector.id, revision);
   const idReservado = reserva?.idSector === sector.id ? reserva.idLugar : null;
   const lugares = disponibles?.map((lugar) => (
@@ -44,7 +44,7 @@ function PlanoSector({ sector, gestionReserva }) {
         data-estado={lugar.estado}
         aria-label={`Lugar ${numero}, ${lugar.id === idReservado ? 'tu reserva' : estados[lugar.estado].texto}`}
         aria-pressed={lugar.id === idReservado}
-        disabled={lugar.estado !== 'LIBRE' || estado !== 'actualizado' || guardando || Boolean(reserva)}
+        disabled={lugar.estado !== 'LIBRE' || estado !== 'actualizado' || guardando || cancelando || Boolean(reserva)}
         onClick={() => reservar(lugar, sector)}
       >
         <strong>{numero}</strong>
@@ -94,7 +94,7 @@ function PlanoSector({ sector, gestionReserva }) {
 }
 
 function PanelReserva({ gestionReserva, gestionPago, idSectorVisible }) {
-  const { reserva, segundos, guardando, aviso } = gestionReserva;
+  const { reserva, segundos, guardando, cancelando, aviso, cancelar } = gestionReserva;
   const viendoFicha = Boolean(gestionPago.fichaVisible);
   const reloj = `${numeroLugar(Math.floor(segundos / 60))}:${numeroLugar(segundos % 60)}`;
   const fase = segundos === 0 ? 'verificando' : segundos <= 60 ? 'por-vencer' : 'activa';
@@ -121,7 +121,13 @@ function PanelReserva({ gestionReserva, gestionPago, idSectorVisible }) {
           <span className="tiempo-reserva" role="timer" aria-labelledby="etiqueta-reloj">{reloj}</span>
         </div>
       )}
-      <PanelPago gestionPago={gestionPago} reserva={reserva} segundos={segundos} />
+      <PanelPago gestionPago={gestionPago} reserva={reserva} segundos={segundos} cancelando={cancelando} />
+      {(cancelando || (reserva && segundos > 0)) && (
+        <button className="accion accion-cancelar" type="button" disabled={cancelando || gestionPago.ocupado} onClick={cancelar}>
+          {cancelando ? 'Cancelando…' : 'Cancelar reserva'}
+        </button>
+      )}
+      {reserva && aviso && <p className="subtitulo aviso-reserva" role="status">{aviso}</p>}
     </section>
   );
 }

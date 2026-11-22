@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { consultarReserva, crearReserva } from './api.js';
+import { cancelarReserva, consultarReserva, crearReserva } from './api.js';
 
 const claveReserva = 'parqueo-tarija:reserva';
 
@@ -36,7 +36,7 @@ function segundosRestantes(reserva) {
 
 const avisosDeCierre = {
   EXPIRADA: 'La reserva venció. Ya puedes elegir otro lugar libre.',
-  CANCELADA: 'La reserva fue cancelada.',
+  CANCELADA: 'Reserva cancelada. El lugar quedó libre.',
   PAGADA: 'El pago de tu reserva fue confirmado.',
 };
 
@@ -44,14 +44,19 @@ export function useReserva() {
   const [reserva, setReserva] = useState(recuperarReserva);
   const [segundos, setSegundos] = useState(() => segundosRestantes(reserva));
   const [guardando, setGuardando] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
   const [aviso, setAviso] = useState('');
   const [cierre, setCierre] = useState(null);
   const [revision, setRevision] = useState(0);
   const [consulta, setConsulta] = useState(0);
   const creando = useRef(false);
+  const cancelacionEnCurso = useRef(false);
+  const ultimoCierre = useRef(null);
   const consultarEstado = useCallback(() => setConsulta((actual) => actual + 1), []);
 
   const cerrarReserva = useCallback((id, estado, mensaje) => {
+    if (ultimoCierre.current === id) return;
+    ultimoCierre.current = id;
     guardarReserva(null);
     setReserva(null);
     setCierre({ id, estado });
@@ -120,7 +125,7 @@ export function useReserva() {
   }, [reserva, consulta, cerrarReserva]);
 
   async function reservar(lugar, sector) {
-    if (creando.current || reserva) return;
+    if (creando.current || cancelacionEnCurso.current || reserva) return;
     creando.current = true;
     setGuardando(true);
     setAviso('');
@@ -153,5 +158,27 @@ export function useReserva() {
     }
   }
 
-  return { reserva, segundos, guardando, aviso, cierre, revision, reservar, consultarEstado };
+  async function cancelar() {
+    if (!reserva || cancelacionEnCurso.current || tiempoRestante(reserva) === 0) return;
+    cancelacionEnCurso.current = true;
+    setCancelando(true);
+    setAviso('');
+
+    try {
+      await cancelarReserva(reserva, AbortSignal.timeout(7000));
+      cerrarReserva(reserva.id, 'CANCELADA', avisosDeCierre.CANCELADA);
+    } catch (error) {
+      if (error.status === 410) {
+        cerrarReserva(reserva.id, 'EXPIRADA', avisosDeCierre.EXPIRADA);
+      } else if (ultimoCierre.current !== reserva.id) {
+        setAviso('No se pudo confirmar la cancelación. Puedes volver a intentarlo si la reserva sigue activa.');
+        consultarEstado();
+      }
+    } finally {
+      cancelacionEnCurso.current = false;
+      setCancelando(false);
+    }
+  }
+
+  return { reserva, segundos, guardando, cancelando, aviso, cierre, revision, reservar, cancelar, consultarEstado };
 }
