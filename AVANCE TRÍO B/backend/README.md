@@ -101,6 +101,12 @@ La API queda disponible en `http://localhost:3000`.
 | POST | `/api/encargado/fichas/:codigo/verificar` | Ficha `EMITIDA` → `VERIFICADA` (exige el pago confirmado). |
 | POST | `/api/encargado/fichas/:codigo/pagada` | Ficha `VERIFICADA` → `PAGADA`. |
 | GET | `/api/encargado/notificaciones` | Fichas nuevas (`?noLeidas=true`). `POST .../:id/leida` la marca como leída. |
+| GET | `/api/admin/lugares` | Estado de los 40 lugares (rol ADMIN). |
+| GET | `/api/admin/cancelaciones` | Cancelaciones y expiraciones. Filtros `desde`, `hasta`, `idSector`, `tipo`. |
+| GET | `/api/admin/pagos` | Pagos y fichas. Filtros `desde`, `hasta`, `idSector`, `metodo`. |
+| GET | `/api/admin/reportes/resumen` | Ingresos por sector y método, ocupación y cancelaciones por tipo. |
+| GET / PUT | `/api/admin/tarifas`, `/api/admin/tarifas/:idSector` | Consulta y cambia la tarifa (`{ "monto": "4.50" }`). |
+| GET / POST | `/api/admin/encargados` | Lista y crea encargados. `PATCH /:id` edita o desactiva; `POST /:id/password` restablece la contraseña. |
 
 **Reservas (19 nov).** El conductor no tiene login: la reserva se identifica con un `tokenReserva` firmado (HMAC con `JWT_SECRET`) que se envía en el header `x-reserva-token`. Un barrido cada 5 segundos expira las reservas vencidas, libera el lugar y registra la cancelación por expiración y la bitácora. Reservar usa transacciones con bloqueo de fila, así que dos conductores no pueden tomar el mismo lugar.
 
@@ -120,6 +126,14 @@ Las consultas usan sentencias parametrizadas de PostgreSQL (`$1`, `$2`) para pre
 - **Roles:** el panel del encargado exige el rol `ENCARGADO` y todas las consultas se limitan a **su sector**; una ficha de otro sector responde 404.
 - **Efectivo:** `cobrar` → `verificar` → `pagada`. Verificar antes de cobrar responde 409, y cobrar una reserva vencida responde 410.
 - **Crear los usuarios iniciales:** `npm run seed:usuarios` crea `admin` y un `encargado<N>` por sector. Las contraseñas se toman de `SEED_PASSWORD_ADMIN` y `SEED_PASSWORD_ENCARGADO`; si no están definidas se generan al azar y se muestran **una sola vez**. No hay contraseñas por defecto.
+
+**Panel del administrador (22 nov).**
+- Todas las rutas `/api/admin/...` exigen sesión con rol `ADMIN`.
+- Los filtros de fecha son `AAAA-MM-DD` en hora de Bolivia, inclusive. Cada listado devuelve como máximo 500 registros.
+- **Tarifas:** al cambiar la tarifa se cierra la anterior y se crea una nueva. Las reservas ya hechas conservan el monto que tenían.
+- **Encargados:** la contraseña debe tener de 8 a 72 caracteres con letras y números. Solo se pueden editar usuarios con rol `ENCARGADO`. Ninguna respuesta incluye contraseñas ni hashes.
+- Cada cambio queda en la bitácora con el administrador responsable.
+- Pendiente: exportar reportes a PDF o Excel (RF-34) y gestionar sectores y lugares (RF-27).
 
 ## Estructura
 
@@ -151,6 +165,6 @@ Importa `postman/Sistema-Parqueo.postman_collection.json` en Postman. La variabl
 
 - El script SQL del modelo físico fue **convertido a PostgreSQL** en `db/schema.sql`. Si el Trío A entrega su versión definitiva, hay que comparar y unificar diferencias.
 - Las **tarifas** iniciales (3.00 Bs por sector) son un valor de ejemplo cargado en `db/schema.sql`; hay que confirmar el monto real. El administrador podrá cambiarlas (RF-28).
-- El panel del **administrador** (cancelaciones, pagos, tarifas) se agrega el 22 de noviembre.
+- Exportar los reportes a PDF o Excel (RF-34) y crear o editar sectores y lugares (RF-27).
 - Falta definir cómo se **libera** un lugar `OCUPADO` cuando el conductor se va (no está en el cronograma ni en los requerimientos).
 - La integración con el frontend se realiza el 22 de noviembre.
