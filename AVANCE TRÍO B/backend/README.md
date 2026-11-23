@@ -157,6 +157,21 @@ backend/
 └── package.json
 ```
 
+## Pruebas automáticas
+
+```bash
+npm test                 # unitarias: no necesitan base de datos
+npm run test:integracion # flujo completo contra PostgreSQL real
+```
+
+La de integración **reinicia las tablas** y por eso solo corre si `DB_NAME` contiene "test". Ejemplo:
+
+```bash
+DB_NAME=parqueo_test JWT_SECRET=<32 o más caracteres> PASARELA_SECRET=<16 o más caracteres> BCRYPT_ROUNDS=4 npm run test:integracion
+```
+
+El resumen completo del estado y de los requerimientos está en [`../ENTREGA.md`](../ENTREGA.md).
+
 ## Pruebas con Postman
 
 Importa `postman/Sistema-Parqueo.postman_collection.json` en Postman. La variable `baseUrl` apunta por defecto a `http://localhost:3000` y `idSector` a `1`.
