@@ -3,7 +3,7 @@
 - **Estilo:** REST + JSON. Prefijo `/api`. Respuestas en español con el formato `{ "ok": true|false, "mensaje": "...", "datos": ... }`.
 - **Stack:** Node.js + Express, PostgreSQL, JWT + bcrypt.
 - **Conductor sin login:** la reserva se identifica con un `tokenReserva` que viaja en el header `x-reserva-token`.
-- **Encargado y administrador:** login con JWT (`Authorization: Bearer <token>`).
+- **Encargado y administrador:** login con JWT (`Authorization: Bearer <token>`). Respuestas 401 si falta o vence la sesión y 403 si el rol no corresponde.
 - **Tiempos:** los 5 minutos se calculan en el servidor. Zona horaria de Bolivia (UTC−4); moneda en bolivianos.
 
 ## Códigos de respuesta
@@ -12,7 +12,9 @@
 |---|---|
 | 200 / 201 | Operación correcta / recurso creado |
 | 400 | Datos inválidos |
-| 403 | Token ausente o inválido |
+| 401 | Falta iniciar sesión o la sesión venció |
+| 403 | Token de reserva inválido o rol sin permiso |
+| 429 | Demasiados intentos de inicio de sesión |
 | 404 | Recurso no encontrado |
 | 409 | Conflicto (lugar no disponible, reserva ya pagada) |
 | 410 | La reserva expiró |
@@ -33,14 +35,25 @@
 | POST | `/api/pagos/qr/confirmar` | Confirmación de la pasarela | RF-11, RF-39 | 20 |
 | GET | `/api/reservas/:id/ficha` | Ficha electrónica | RF-12, RF-15 | 20 |
 
-## Endpoints planeados (21 al 22 de noviembre)
+## Endpoints del login y del encargado (día 21)
+
+| Método | Ruta | Descripción | Req. | Día |
+|---|---|---|---|---|
+| POST | `/api/auth/login` | Login de encargado y administrador (JWT) | RF-16, RF-26 | 21 |
+| GET | `/api/auth/yo` | Datos de la sesión | – | 21 |
+| GET | `/api/encargado/lugares` | Lugares de su sector | RF-17, RF-18 | 21 |
+| GET | `/api/encargado/fichas` | Fichas de su sector (filtros estado y fecha) | RF-24, RF-25 | 21 |
+| GET | `/api/encargado/fichas/:codigo` | Detalle de la ficha | RF-20 | 21 |
+| POST | `/api/encargado/fichas/:codigo/cobrar` | Registra el cobro en efectivo | RF-22 | 21 |
+| POST | `/api/encargado/fichas/:codigo/verificar` | Verifica la ficha | RF-21 | 21 |
+| POST | `/api/encargado/fichas/:codigo/pagada` | Marca la ficha como pagada | RF-21 | 21 |
+| GET | `/api/encargado/notificaciones` | Fichas nuevas | RF-19, RF-23 | 21 |
+| POST | `/api/encargado/notificaciones/:id/leida` | Marca una notificación como leída | RF-23 | 21 |
+
+## Endpoints planeados (22 de noviembre)
 
 | Método | Ruta | Descripción | Req. |
 |---|---|---|---|
-| POST | `/api/auth/login` | Login de encargado y administrador | RF-16, RF-26 |
-| GET | `/api/encargado/fichas` | Fichas del sector del encargado | RF-18, RF-20, RF-25 |
-| POST | `/api/encargado/fichas/:id/cobrar` | Registra el cobro en efectivo | RF-22 |
-| POST | `/api/encargado/fichas/:id/verificar` | Marca la ficha como verificada y el sitio como pagado | RF-21 |
 | GET | `/api/admin/cancelaciones` | Cancelaciones y expiraciones, con filtros | RF-31, RF-32 |
 | GET | `/api/admin/pagos` | Pagos y fichas, con filtros | RF-33 |
 | PUT | `/api/admin/tarifas/:idSector` | Configura la tarifa | RF-28 |

@@ -457,7 +457,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
-                  "pm.test(\"Ficha emitida\", () => pm.expect(pm.response.json().datos.ficha.estado).to.eql(\"EMITIDA\"));"
+                  "pm.test(\"Ficha emitida\", () => pm.expect(pm.response.json().datos.ficha.estado).to.eql(\"EMITIDA\"));",
+                  "pm.collectionVariables.set(\"codigoFicha\", pm.response.json().datos.ficha.codigo);"
                 ]
               }
             }
@@ -486,6 +487,354 @@
               ]
             },
             "description": "El conductor vuelve a ver su ficha (RF-15)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Autenticación",
+      "item": [
+        {
+          "name": "Iniciar sesión (encargado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{usuarioEncargado}}\",\n  \"password\": \"{{passwordEncargado}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Escribe usuarioEncargado y passwordEncargado en las variables de la colección. Guarda el token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenEncargado\", pm.response.json().datos.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mi sesión",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/yo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "yo"
+              ]
+            },
+            "description": "Datos del usuario con sesión iniciada."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Encargado",
+      "item": [
+        {
+          "name": "Lugares de mi sector",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/lugares",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "lugares"
+              ]
+            },
+            "description": "Estado de los lugares del sector del encargado (RF-18)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fichas de mi sector (hoy)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas"
+              ]
+            },
+            "description": "Fichas del día. Filtros: ?estado=EMITIDA y ?fecha=AAAA-MM-DD o todas (RF-24, RF-25)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de una ficha",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas/{{codigoFicha}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas",
+                "{{codigoFicha}}"
+              ]
+            },
+            "description": "Para compararla con la que muestra el conductor (RF-20)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cobrar efectivo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas/{{codigoFicha}}/cobrar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas",
+                "{{codigoFicha}}",
+                "cobrar"
+              ]
+            },
+            "description": "Registra el cobro en efectivo; el lugar queda OCUPADO (RF-22)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar ficha",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas/{{codigoFicha}}/verificar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas",
+                "{{codigoFicha}}",
+                "verificar"
+              ]
+            },
+            "description": "Marca la ficha como VERIFICADA (RF-21). Exige el pago confirmado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Marcar ficha pagada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas/{{codigoFicha}}/pagada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas",
+                "{{codigoFicha}}",
+                "pagada"
+              ]
+            },
+            "description": "Marca la ficha como PAGADA (RF-21)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/notificaciones?noLeidas=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "notificaciones"
+              ],
+              "query": [
+                {
+                  "key": "noLeidas",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Fichas nuevas para el encargado (RF-23)."
           },
           "event": [
             {
@@ -535,6 +884,26 @@
     },
     {
       "key": "pasarelaSecret",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "usuarioEncargado",
+      "value": "encargado1",
+      "type": "string"
+    },
+    {
+      "key": "passwordEncargado",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenEncargado",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "codigoFicha",
       "value": "",
       "type": "string"
     }

@@ -92,6 +92,15 @@ La API queda disponible en `http://localhost:3000`.
 | POST | `/api/reservas/:id/pago` | El conductor elige el pago (`{ "metodo": "QR" }` o `"EFECTIVO"`, header `x-reserva-token`). QR devuelve `codigoQr` y `referencia`; efectivo emite la ficha. |
 | GET | `/api/reservas/:id/ficha` | El conductor consulta su ficha electrónica (header `x-reserva-token`). |
 | POST | `/api/pagos/qr/confirmar` | Confirmación del banco/pasarela (`{ "referencia": "..." }`, header `x-pasarela-secret`). Emite la ficha y marca el lugar `OCUPADO`. |
+| POST | `/api/auth/login` | Inicia sesión (`{ "username": "...", "password": "..." }`). Devuelve un JWT para el header `Authorization: Bearer <token>`. |
+| GET | `/api/auth/yo` | Datos del usuario con sesión iniciada. |
+| GET | `/api/encargado/lugares` | Lugares de **su** sector con su estado (rol ENCARGADO). |
+| GET | `/api/encargado/fichas` | Fichas de su sector. Hoy por defecto; filtros `?estado=` y `?fecha=AAAA-MM-DD` o `todas`. |
+| GET | `/api/encargado/fichas/:codigo` | Detalle de una ficha para compararla con la del conductor. |
+| POST | `/api/encargado/fichas/:codigo/cobrar` | Registra el cobro en efectivo; el lugar pasa a `OCUPADO`. |
+| POST | `/api/encargado/fichas/:codigo/verificar` | Ficha `EMITIDA` → `VERIFICADA` (exige el pago confirmado). |
+| POST | `/api/encargado/fichas/:codigo/pagada` | Ficha `VERIFICADA` → `PAGADA`. |
+| GET | `/api/encargado/notificaciones` | Fichas nuevas (`?noLeidas=true`). `POST .../:id/leida` la marca como leída. |
 
 **Reservas (19 nov).** El conductor no tiene login: la reserva se identifica con un `tokenReserva` firmado (HMAC con `JWT_SECRET`) que se envía en el header `x-reserva-token`. Un barrido cada 5 segundos expira las reservas vencidas, libera el lugar y registra la cancelación por expiración y la bitácora. Reservar usa transacciones con bloqueo de fila, así que dos conductores no pueden tomar el mismo lugar.
 
@@ -104,6 +113,13 @@ Las consultas usan sentencias parametrizadas de PostgreSQL (`$1`, `$2`) para pre
 - **Efectivo:** se emite la ficha al elegirlo; el pago queda `PENDIENTE` hasta que el encargado cobre (se agrega con el login, 21 nov). Si el conductor cancela o la reserva vence, la ficha se `ANULA` y el pago se `RECHAZA`.
 - Al emitir una ficha se crea una **notificación** para los encargados activos del sector (RF-19, RF-23) y se registra todo en la **bitácora**.
 - **Confirmación de la pasarela simulada:** no hay banco real conectado. La ruta `/api/pagos/qr/confirmar` está protegida con `PASARELA_SECRET` (mínimo 16 caracteres, en el `.env`); si no está definido responde 503.
+
+**Login y panel del encargado (21 nov).**
+- **Login:** JWT firmado con `JWT_SECRET` (HS256, vence según `JWT_EXPIRES_IN`) y contraseñas con **bcrypt**. Ante un usuario o contraseña incorrectos responde siempre el mismo mensaje. Después de 5 intentos fallidos seguidos (por IP y usuario) bloquea 15 minutos (429).
+- **Cada petición** comprueba el token y que el usuario siga activo: si el administrador lo desactiva, pierde el acceso de inmediato.
+- **Roles:** el panel del encargado exige el rol `ENCARGADO` y todas las consultas se limitan a **su sector**; una ficha de otro sector responde 404.
+- **Efectivo:** `cobrar` → `verificar` → `pagada`. Verificar antes de cobrar responde 409, y cobrar una reserva vencida responde 410.
+- **Crear los usuarios iniciales:** `npm run seed:usuarios` crea `admin` y un `encargado<N>` por sector. Las contraseñas se toman de `SEED_PASSWORD_ADMIN` y `SEED_PASSWORD_ENCARGADO`; si no están definidas se generan al azar y se muestran **una sola vez**. No hay contraseñas por defecto.
 
 ## Estructura
 
@@ -135,6 +151,6 @@ Importa `postman/Sistema-Parqueo.postman_collection.json` en Postman. La variabl
 
 - El script SQL del modelo físico fue **convertido a PostgreSQL** en `db/schema.sql`. Si el Trío A entrega su versión definitiva, hay que comparar y unificar diferencias.
 - Las **tarifas** iniciales (3.00 Bs por sector) son un valor de ejemplo cargado en `db/schema.sql`; hay que confirmar el monto real. El administrador podrá cambiarlas (RF-28).
-- **Autenticación** (login de encargado y administrador) y el cobro en efectivo por el encargado se agregan el 21 de noviembre.
+- El panel del **administrador** (cancelaciones, pagos, tarifas) se agrega el 22 de noviembre.
 - Falta definir cómo se **libera** un lugar `OCUPADO` cuando el conductor se va (no está en el cronograma ni en los requerimientos).
 - La integración con el frontend se realiza el 22 de noviembre.
