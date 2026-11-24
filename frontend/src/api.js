@@ -1,6 +1,6 @@
 const baseApi = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
 
-async function solicitar(ruta, opciones, incluirHora = false) {
+export async function solicitar(ruta, opciones, incluirHora = false) {
   const respuesta = await fetch(`${baseApi}${ruta}`, { cache: 'no-store', ...opciones });
   if (!respuesta.ok) {
     const cuerpo = await respuesta.json().catch(() => null);

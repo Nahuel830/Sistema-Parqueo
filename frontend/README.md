@@ -36,3 +36,11 @@ El panel de reserva muestra el monto y usa `POST /api/reservas/:id/pago` para el
 Para usar tu propia imagen, colócala en `public/pagos/qr.png` y define `VITE_QR_IMAGEN=/pagos/qr.png` en `.env.local`. Reinicia Vite o vuelve a compilar. Puedes reemplazar el archivo manteniendo ese nombre o cambiar la variable para indicar otra ruta. Una imagen fija solo sirve para confirmar un pago si la pasarela puede relacionarlo con la reserva que inició la API.
 
 «Volver a ver ficha» vuelve a consultar el estado de la ficha. El navegador guarda las referencias de las fichas para poder abrirlas en una visita posterior mientras sigan vigentes.
+
+## Auditoría del administrador
+
+Entra desde «Administración» o abre `/admin`. El acceso usa `POST /api/auth/login` y requiere una cuenta `ADMIN`. El panel envía el token Bearer a la API y consulta `GET /api/auth/yo` cuando se recarga la página. Al desplegar la app, configura el servidor de archivos estáticos para servir `index.html` al abrir `/admin`.
+
+Cancelaciones usa `GET /api/admin/cancelaciones` con filtros `desde`, `hasta`, `idSector` y `tipo`. Si se llega al límite actual de 500 resultados, acota el rango de fechas. El filtro de sector combina los sectores públicos y los sectores de la lista de lugares del administrador. Un sector histórico sin lugares activos puede quedar fuera del selector con la API actual.
+
+La pestaña Bitácora queda conectada al contrato propuesto `GET /api/admin/bitacora` con autorización `ADMIN`. Espera `datos` como un arreglo de registros con `id`, `fecha` en ISO 8601, `accion`, `entidad`, `idEntidad`, `estadoAnterior`, `estadoNuevo` y `responsable` como texto o `null`. La API aún debe exponer esta consulta y proporcionar el responsable de cada acción. La pestaña indica que la consulta no está disponible si la API responde `404` o `501`.

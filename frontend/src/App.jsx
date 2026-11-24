@@ -4,6 +4,7 @@ import { useDisponibilidad } from './useDisponibilidad.js';
 import { useReserva } from './useReserva.js';
 import { usePago } from './usePago.js';
 import PanelPago from './PanelPago.jsx';
+import Cabecera from './Cabecera.jsx';
 
 const estados = {
   LIBRE: { texto: 'Libre', simbolo: '✓' },
@@ -167,12 +168,12 @@ export default function App() {
 
   return (
     <>
-      <header className="cabecera">
-        <div className="contenedor barra">
-          <div className="marca"><span aria-hidden="true">P</span> Parqueo Tarija</div>
+      <Cabecera>
+        <div className="acciones-cabecera">
           <span className="ubicacion">Tarija, Bolivia</span>
+          <a className="enlace-cabecera" href="/admin">Administración</a>
         </div>
-      </header>
+      </Cabecera>
 
       <main className="contenedor principal">
         <section className="portada" aria-labelledby="titulo-pagina">
