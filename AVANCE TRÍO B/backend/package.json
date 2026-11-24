@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "test": "node --test \"tests/**/*.test.js\"",
     "dev": "node --watch src/server.js",
-    "seed:usuarios": "node db/seed-usuarios.js"
+    "seed:usuarios": "node db/seed-usuarios.js",
+    "test:integracion": "node --test \"tests/integracion/*.integracion.js\""
   },
   "engines": {
     "node": ">=18.0.0"
