@@ -1,5 +1,5 @@
 // Limita los intentos fallidos de inicio de sesión por IP y usuario (en memoria).
-function crearLimiteLogin({ maximo = 5, ventanaMs = 15 * 60 * 1000, ahora = () => Date.now() } = {}) {
+function crearLimiteLogin({ maximo = 5, ventanaMs = 15 * 60 * 1000, ahora = () => Date.now(), limiteEntradas = 5000 } = {}) {
   const intentos = new Map();
 
   function clave(req) {
@@ -20,7 +20,15 @@ function crearLimiteLogin({ maximo = 5, ventanaMs = 15 * 60 * 1000, ahora = () =
     return next();
   }
 
+  // Evita que el mapa crezca sin límite si alguien prueba miles de usuarios distintos.
+  function purgar() {
+    for (const [k, registro] of intentos) {
+      if (!vigente(registro)) intentos.delete(k);
+    }
+  }
+
   function registrarFallo(req) {
+    if (intentos.size >= limiteEntradas) purgar();
     const k = clave(req);
     const registro = intentos.get(k);
     if (vigente(registro)) registro.fallos += 1;
@@ -31,7 +39,7 @@ function crearLimiteLogin({ maximo = 5, ventanaMs = 15 * 60 * 1000, ahora = () =
     intentos.delete(clave(req));
   }
 
-  return { verificar, registrarFallo, limpiar };
+  return { verificar, registrarFallo, limpiar, tamano: () => intentos.size };
 }
 
 module.exports = { crearLimiteLogin };

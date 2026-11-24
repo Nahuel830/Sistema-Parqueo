@@ -110,3 +110,13 @@ test('limiteLogin_InicioDeSesionCorrecto_ReiniciaElContador', () => {
   limite.verificar(req, respuestaFalsa(), () => { siguio = true; });
   assert.equal(siguio, true);
 });
+
+test('limiteLogin_MuchosUsuariosDistintos_LimpiaLosRegistrosVencidos', () => {
+  let ahora = 0;
+  const limite = crearLimiteLogin({ ventanaMs: 1000, ahora: () => ahora, limiteEntradas: 50 });
+  for (let i = 0; i < 50; i++) limite.registrarFallo({ ip: '5.5.5.5', body: { username: `u${i}` } });
+  assert.equal(limite.tamano(), 50);
+  ahora = 5000; // todos los registros vencieron
+  limite.registrarFallo({ ip: '5.5.5.5', body: { username: 'nuevo' } });
+  assert.equal(limite.tamano(), 1);
+});

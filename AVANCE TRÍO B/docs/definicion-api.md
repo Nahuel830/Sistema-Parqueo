@@ -50,13 +50,22 @@
 | GET | `/api/encargado/notificaciones` | Fichas nuevas | RF-19, RF-23 | 21 |
 | POST | `/api/encargado/notificaciones/:id/leida` | Marca una notificación como leída | RF-23 | 21 |
 
-## Endpoints planeados (22 de noviembre)
+## Endpoints del administrador (día 22)
 
-| Método | Ruta | Descripción | Req. |
-|---|---|---|---|
-| GET | `/api/admin/cancelaciones` | Cancelaciones y expiraciones, con filtros | RF-31, RF-32 |
-| GET | `/api/admin/pagos` | Pagos y fichas, con filtros | RF-33 |
-| PUT | `/api/admin/tarifas/:idSector` | Configura la tarifa | RF-28 |
+| Método | Ruta | Descripción | Req. | Día |
+|---|---|---|---|---|
+| GET | `/api/admin/lugares` | Estado de los 40 lugares | RF-35 | 22 |
+| GET | `/api/admin/cancelaciones` | Cancelaciones y expiraciones, con filtros | RF-31, RF-32 | 22 |
+| GET | `/api/admin/pagos` | Pagos y fichas, con filtros | RF-33 | 22 |
+| GET | `/api/admin/reportes/resumen` | Ingresos, ocupación y cancelaciones | RF-34 | 22 |
+| GET | `/api/admin/tarifas` | Tarifas vigentes | RF-28 | 22 |
+| PUT | `/api/admin/tarifas/:idSector` | Cambia la tarifa de un sector | RF-28 | 22 |
+| GET | `/api/admin/encargados` | Lista de encargados | RF-29 | 22 |
+| POST | `/api/admin/encargados` | Crea un encargado y lo asigna a un sector | RF-29, RF-30 | 22 |
+| PATCH | `/api/admin/encargados/:id` | Edita, cambia de sector o desactiva | RF-29, RF-30 | 22 |
+| POST | `/api/admin/encargados/:id/password` | Restablece la contraseña | RF-29 | 22 |
+
+Pendiente: exportar reportes a PDF o Excel (RF-34) y gestionar sectores y lugares (RF-27).
 
 ## Estructura del backend
 
