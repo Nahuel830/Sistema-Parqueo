@@ -19,6 +19,9 @@ button:focus-visible { outline: 3px solid #226654; outline-offset: 3px; }
 .marca { display: flex; align-items: center; gap: 10px; font-size: 1.125rem; font-weight: 750; letter-spacing: -.035em; }
 .marca span { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 10px; background: var(--marca); color: #fff; font-size: 1.5rem; }
 .ubicacion { color: var(--secundario); font-size: .875rem; }
+.acciones-cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: end; gap: 8px 12px; }
+.enlace-cabecera { color: var(--marca); font-size: .875rem; font-weight: 700; text-underline-offset: 4px; }
+.enlace-cabecera:focus-visible { outline: 3px solid #226654; outline-offset: 4px; }
 .principal { padding-block: 20px 36px; }
 
 .portada {
