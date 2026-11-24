@@ -1,0 +1,25 @@
+Summary,Issue Type,Description,Labels,Labels,Due date
+"[Todos] Alcance, actores, flujo, README y glosario",Task,Cronograma del proyecto. Responsables: Todo el equipo.,Todos,Documentacion,2026-11-11
+[TrioA] Requerimientos no funcionales,Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Documentacion,2026-11-12
+[TrioB] Requerimientos funcionales,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Documentacion,2026-11-12
+[TrioA] Modelo conceptual de la BD (inicio),Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Base-de-datos,2026-11-13
+[TrioB] Documento de actores y casos de uso,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Documentacion,2026-11-13
+[TrioA] Modelo conceptual de la BD (cierre),Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Base-de-datos,2026-11-14
+"[TrioB] Diagramas de flujo: reserva, pago, cancelación y expiración",Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Documentacion,2026-11-14
+[TrioA] Corrección del modelo conceptual (sin multiplicidades),Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Base-de-datos,2026-11-15
+[TrioB] Revisión e integración de las ramas de documentación,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Documentacion,2026-11-15
+[TrioA] Prototipos de pantallas,Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Frontend,2026-11-16
+[TrioB] Definición de la API y estructura del backend,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Backend,2026-11-16
+[TrioA] Modelo lógico de la BD,Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Base-de-datos,2026-11-17
+[TrioB] Configuración del backend y del repositorio,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Backend,2026-11-17
+[TrioA] Modelo físico y script SQL (2 sectores y 40 lugares),Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Base-de-datos,2026-11-18
+[TrioB] Backend: sectores y lugares,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Backend,2026-11-18
+[TrioA] Frontend del conductor: sector y mapa de lugares,Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Frontend,2026-11-19
+[TrioB] Backend: reserva de 5 minutos con expiración,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Backend,2026-11-19
+[TrioA] Frontend del conductor: pago y ficha,Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Frontend,2026-11-20
+[TrioB] Backend: pago por QR y efectivo,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Backend,2026-11-20
+[TrioA] Frontend del encargado: recepción y validación de fichas,Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Frontend,2026-11-21
+[TrioB] Backend: ficha electrónica y login,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Backend,2026-11-21
+[TrioA] Panel del administrador (auditoría de cancelaciones),Task,"Cronograma del proyecto. Responsables: Rodrigo, Sergio, Enny.",TrioA,Frontend,2026-11-22
+[TrioB] Integración frontend y backend,Task,"Cronograma del proyecto. Responsables: Nahuel, José, Xavier.",TrioB,Backend,2026-11-22
+"[Todos] Pruebas, correcciones, documentación final y entrega",Task,Cronograma del proyecto. Responsables: Todo el equipo.,Todos,Pruebas-y-entrega,2026-11-23
