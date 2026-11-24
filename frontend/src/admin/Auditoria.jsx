@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { consultarBitacora, consultarCancelaciones, consultarSectores } from './apiAdmin.js';
 import { useConsultaAdmin } from './useConsultaAdmin.js';
+import GestionParqueo from './GestionParqueo.jsx';
 
 const filtrosVacios = { desde: '', hasta: '', idSector: '', tipo: '' };
 const tipos = { CONDUCTOR: 'Conductor', EXPIRACION: 'Expiración' };
@@ -176,13 +177,14 @@ export default function Auditoria({ token, accesoRechazado }) {
 
   return (
     <div className="auditoria">
-      <nav className="nav-auditoria" aria-label="Secciones de auditoría">
+      <nav className="nav-auditoria" aria-label="Secciones de administración">
         <button className="accion" type="button" aria-pressed={seccion === 'cancelaciones'} onClick={() => setSeccion('cancelaciones')}>Cancelaciones</button>
         <button className="accion" type="button" aria-pressed={seccion === 'bitacora'} onClick={() => setSeccion('bitacora')}>Bitácora</button>
+        <button className="accion" type="button" aria-pressed={seccion === 'gestion'} onClick={() => setSeccion('gestion')}>Sectores y tarifas</button>
       </nav>
-      {seccion === 'cancelaciones'
-        ? <Cancelaciones token={token} accesoRechazado={accesoRechazado} />
-        : <Bitacora token={token} accesoRechazado={accesoRechazado} />}
+      {seccion === 'cancelaciones' && <Cancelaciones token={token} accesoRechazado={accesoRechazado} />}
+      {seccion === 'bitacora' && <Bitacora token={token} accesoRechazado={accesoRechazado} />}
+      {seccion === 'gestion' && <GestionParqueo token={token} accesoRechazado={accesoRechazado} />}
     </div>
   );
 }

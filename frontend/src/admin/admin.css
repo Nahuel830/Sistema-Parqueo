@@ -5,7 +5,7 @@
 .formulario-admin { display: grid; gap: 12px; }
 .acceso-admin .formulario-admin { margin-top: 14px; }
 .formulario-admin label { display: grid; gap: 5px; min-width: 0; color: var(--secundario); font-size: .875rem; font-weight: 700; }
-.formulario-admin input, .formulario-admin select {
+.formulario-admin input, .formulario-admin select, .formulario-admin textarea {
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -18,7 +18,7 @@
   font-size: 1rem;
   font-weight: 400;
 }
-.formulario-admin input:focus-visible, .formulario-admin select:focus-visible, .tabla-auditoria:focus-visible {
+.formulario-admin input:focus-visible, .formulario-admin select:focus-visible, .formulario-admin textarea:focus-visible, .tabla-auditoria:focus-visible {
   outline: 3px solid #226654;
   outline-offset: 2px;
 }
@@ -48,11 +48,43 @@
 .tipo-auditoria[data-tipo='EXPIRACION'] { background: #f8ebcf; color: #794a12; }
 .pie-auditoria { margin-top: 8px; }
 
+.panel-gestion, .gestion-sector, .gestion-detalles, .bloque-gestion { display: grid; gap: 12px; }
+.panel-gestion h3 { margin: 0; font-size: 1rem; }
+.panel-gestion .accion:disabled { opacity: .7; cursor: default; }
+.estado-gestion {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid #e6d3aa;
+  border-radius: 9px;
+  background: #fcf0d7;
+  color: #704a18;
+  font-size: .875rem;
+}
+.estado-gestion[data-prueba='true'] { border-color: #afc8b8; background: #eaf4ec; color: var(--marca); }
+.gestion-sector > .formulario-admin { max-width: 420px; }
+.gestion-detalles { grid-template-columns: minmax(0, 1fr); align-items: start; }
+.bloque-gestion, .editor-gestion { min-width: 0; padding: 12px; border: 1px solid var(--borde); border-radius: 10px; }
+.editor-gestion { background: #f8faf7; }
+.editor-gestion textarea { resize: vertical; }
+.bloque-gestion > .accion { justify-self: start; }
+.lista-gestion { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.lista-gestion li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-block: 8px; border-top: 1px solid var(--borde); }
+.lista-gestion li:last-child { padding-bottom: 0; }
+.estado-lugar-gestion { display: inline-block; margin-left: 8px; padding: 2px 6px; border-radius: 5px; background: var(--fondo-estado, #eef1eb); color: var(--estado, #395348); font-size: .8125rem; font-weight: 650; }
+.tarifa-gestion { color: var(--marca); font-size: 1.5rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.confirmacion-gestion { color: #195b43; font-size: .9375rem; }
+
 @media (min-width: 760px) {
   .filtros-auditoria { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .gestion-detalles { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
 }
 
 @media (max-width: 759px) {
+  .bloque-tarifa { grid-row: 1; }
   .tabla-auditoria table, .tabla-auditoria tbody { display: block; min-width: 0; }
   .tabla-auditoria thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .tabla-auditoria tbody tr {

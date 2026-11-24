@@ -44,3 +44,21 @@ Entra desde «Administración» o abre `/admin`. El acceso usa `POST /api/auth/l
 Cancelaciones usa `GET /api/admin/cancelaciones` con filtros `desde`, `hasta`, `idSector` y `tipo`. Si se llega al límite actual de 500 resultados, acota el rango de fechas. El filtro de sector combina los sectores públicos y los sectores de la lista de lugares del administrador. Un sector histórico sin lugares activos puede quedar fuera del selector con la API actual.
 
 La pestaña Bitácora queda conectada al contrato propuesto `GET /api/admin/bitacora` con autorización `ADMIN`. Espera `datos` como un arreglo de registros con `id`, `fecha` en ISO 8601, `accion`, `entidad`, `idEntidad`, `estadoAnterior`, `estadoNuevo` y `responsable` como texto o `null`. La API aún debe exponer esta consulta y proporcionar el responsable de cada acción. La pestaña indica que la consulta no está disponible si la API responde `404` o `501`.
+
+## Sectores, lugares y tarifas
+
+En `/admin`, abre «Sectores y tarifas». Las tarifas usan las rutas vigentes `GET /api/admin/tarifas` y `PUT /api/admin/tarifas/:idSector` con `{ "monto": "4.50" }`. El backend conserva el monto de las reservas existentes.
+
+Si el catálogo administrativo devuelve `404` o `501`, el panel combina los sectores de `/api/sectores` y los lugares de `/api/admin/lugares`. «Probar edición local» habilita altas, ediciones y desactivaciones en una copia temporal, incluida la tarifa. Los cambios de prueba se descartan al salir y no se envían a la API.
+
+Contrato propuesto para conectar las operaciones de RF-27, con autorización `ADMIN` y respuestas `{ "datos": ... }`:
+
+| Método y ruta | Datos |
+| --- | --- |
+| `GET /api/admin/sectores` | Lista de sectores, incluidos los inactivos. Cada sector contiene `id`, `nombre`, `descripcion`, `activo` y `lugares`. Cada lugar contiene `id`, `numero`, `estado` y `activo`. |
+| `POST /api/admin/sectores` | Recibe `{ nombre, descripcion }` y devuelve el sector creado con su `id`. |
+| `PATCH /api/admin/sectores/:id` | Recibe `{ nombre, descripcion }` para editar o `{ activo: false }` para desactivar. Devuelve el sector actualizado. |
+| `POST /api/admin/sectores/:id/lugares` | Recibe `{ numero }` y devuelve el nuevo lugar. |
+| `PATCH /api/admin/sectores/:id/lugares/:idLugar` | Recibe `{ numero }` para editar o `{ activo: false }` para desactivar. Devuelve el lugar actualizado. |
+
+La desactivación conserva los registros históricos. En la integración real, el backend debe validar el estado de las reservas y los lugares al guardar y devolver un error si la operación no procede. El panel solo informa un cambio como guardado cuando la API lo confirma.

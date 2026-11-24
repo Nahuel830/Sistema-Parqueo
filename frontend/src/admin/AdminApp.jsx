@@ -117,7 +117,7 @@ export default function AdminApp() {
       </Cabecera>
       <main className="contenedor principal admin">
         <section className="portada" aria-labelledby="titulo-admin">
-          <h1 id="titulo-admin">Auditoría del parqueo</h1>
+          <h1 id="titulo-admin">Administración del parqueo</h1>
         </section>
 
         {!sesion && <AccesoAdmin aviso={aviso} alEntrar={entrar} />}
