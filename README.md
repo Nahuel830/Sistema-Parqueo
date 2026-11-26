@@ -63,6 +63,97 @@ Validación presencial;	Acción del encargado para confirmar la ficha presentada
 Auditoría	;Consulta del historial de acciones, cancelaciones, vencimientos y verificaciones.
 
 
+## Cómo ejecutar en Windows
+
+> [!IMPORTANT]
+> Requisitos previos: [Node.js ≥ 18](https://nodejs.org/) y [PostgreSQL ≥ 14](https://www.postgresql.org/download/windows/) instalados.
+
+### 1. Instalar PostgreSQL y crear la base de datos
+
+1. Descarga e instala PostgreSQL desde [postgresql.org](https://www.postgresql.org/download/windows/).  
+   Durante la instalación, anota la contraseña que definas para el usuario `postgres`.
+2. Abre **pgAdmin** o **psql** y ejecuta:
+   ```sql
+   CREATE DATABASE parqueo_tarija;
+   ```
+3. Aplica el esquema desde la raíz del proyecto (en PowerShell):
+   ```powershell
+   $env:PGPASSWORD="tu_contraseña"
+   psql -U postgres -h 127.0.0.1 -d parqueo_tarija -f "AVANCE TRÍO B/backend/db/schema.sql"
+   ```
+
+### 2. Configurar el archivo `.env` del backend
+
+Copia el ejemplo y edítalo:
+
+```powershell
+Copy-Item "AVANCE TRÍO B/backend/.env.example" "AVANCE TRÍO B/backend/.env"
+```
+
+Luego abre `AVANCE TRÍO B/backend/.env` y ajusta estos valores:
+
+```
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=tu_contraseña_de_postgres
+DB_NAME=parqueo_tarija
+JWT_SECRET=una_cadena_aleatoria_de_al_menos_32_caracteres
+PASARELA_SECRET=al_menos_16_caracteres
+SEED_PASSWORD_ADMIN=admin1234
+SEED_PASSWORD_ENCARGADO=password
+```
+
+> [!CAUTION]
+> El archivo `.env` **nunca** debe subirse a git; ya está excluido en `.gitignore`.
+
+### 3. Instalar dependencias
+
+Desde la **raíz** del proyecto:
+
+```powershell
+npm run install:all
+```
+
+Esto instala las dependencias de la raíz, del backend y del frontend.
+
+### 4. Crear los usuarios iniciales
+
+```powershell
+npm --prefix "AVANCE TRÍO B/backend" run seed:usuarios
+```
+
+Esto crea en la base de datos los usuarios de prueba locales:
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| `admin` | `admin1234` | Administrador |
+| `encargado1` | `password` | Encargado – Plaza Sucre |
+| `encargado2` | `password` | Encargado – Palacio de Justicia |
+
+> [!NOTE]
+> Estas contraseñas son solo para entorno local de desarrollo y se leen del `.env`.  
+> En producción usa contraseñas fuertes y no las publiques.
+
+### 5. Levantar el sistema completo
+
+```powershell
+npm run dev
+```
+
+Esto levanta en paralelo:
+- **API** → http://localhost:3000
+- **Frontend** → http://localhost:5173
+
+### Verificar que todo funciona
+
+```powershell
+# Sectores disponibles (debe devolver Plaza Sucre y Palacio de Justicia)
+Invoke-WebRequest -Uri http://localhost:3000/api/sectores -UseBasicParsing | Select-Object -ExpandProperty Content
+```
+
+---
+
 ## Nombres  
 Nahuel Fernando Martinez Mariscal/
 Jose Manuel Huarachi Colque/
