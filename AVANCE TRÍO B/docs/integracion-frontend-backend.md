@@ -33,5 +33,26 @@ En el avance del 22 de noviembre se abrió el frontend público en Chromium cont
 
 ## Observaciones
 - Mientras se espera el pago por QR, el frontend consulta `GET /api/reservas/:id/ficha` cada 2 segundos y la API responde **404** hasta que la ficha existe. Es lo esperado y aparece en la consola del navegador. Si se quisiera evitar ese ruido, la API podría responder 200 con `datos: null`, pero habría que adaptar el frontend.
-- La versión actual incluye `/admin` para auditoría, sectores, lugares y reportes, y `/encargado` para consultar los lugares del sector y registrar salidas. Ambas pantallas usan `Authorization: Bearer <token>`.
+- La versión actual incluye `/admin` para auditoría, sectores, lugares y reportes, y `/encargado` para recibir y validar las fichas del sector (cobro en efectivo, verificación y pago), consultar los lugares y registrar salidas. Ambas pantallas usan `Authorization: Bearer <token>`.
 - El adaptador de Red Enlace genera un QR por reserva y verifica la confirmación con el proveedor. Consulta su configuración en el [README del backend](../backend/README.md#activar-qr-con-red-enlace).
+
+## Panel del encargado: fichas (cronograma del 21 de noviembre)
+Se probó la pantalla `/encargado` con un navegador contra la API real y PostgreSQL:
+
+| Prueba | Resultado |
+|---|---|
+| La lista muestra las fichas del sector del encargado y no las de otro sector | Correcto |
+| Las fichas nuevas se marcan como "Nueva" y la pestaña "Fichas" muestra cuántas hay | Correcto |
+| Una ficha que llega sola aparece en menos de 12 segundos, sin recargar | Correcto |
+| Ficha en efectivo: pide confirmar y registra el cobro → verificar → marcar como pagada | Correcto; cada paso cambia el estado en la pantalla y en la lista |
+| Sin cobrar, la ficha en efectivo no ofrece verificar | Correcto |
+| Una ficha pagada por QR no pide cobrar efectivo y ofrece verificar | Correcto |
+| Buscar el código de una ficha de otro sector | Responde "Ficha no encontrada en tu sector" |
+| Una ficha anulada avisa y no ofrece acciones | Correcto |
+| La pestaña "Lugares y salidas" sigue funcionando | Correcto |
+| En el celular no hay desplazamiento horizontal | Correcto |
+| Una cuenta de administrador no entra al panel del encargado | Correcto |
+
+![Lista de fichas del encargado](integracion/encargado-fichas.png)
+
+![Detalle de una ficha en efectivo](integracion/encargado-detalle.png)

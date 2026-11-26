@@ -45,6 +45,16 @@ En «Sectores y lugares» puedes crear sectores con su tarifa inicial, editar su
 
 ## Panel del encargado
 
-Entra desde «Encargados» o abre `/encargado` con una cuenta `ENCARGADO`. Pulsa «Actualizar» para consultar tu sector. Cuando un vehículo salga, usa «Registrar salida» en la fila del lugar y confirma. La vista pública detecta el cambio en su próxima consulta de disponibilidad.
+Entra desde «Encargados» o abre `/encargado` con una cuenta `ENCARGADO`. Tiene dos pestañas.
+
+**Fichas.** Muestra las fichas de tu sector (las de hoy, o las de otra fecha o estado con los filtros). La lista se actualiza sola cada 5 segundos con `GET /api/encargado/fichas`, y las fichas nuevas aparecen marcadas como «Nueva», con su número en la pestaña (`GET /api/encargado/notificaciones`). Puedes buscar una ficha por su código y abrirla para compararla con la que muestra el conductor. Según su estado, el detalle ofrece:
+
+- **Registrar cobro en efectivo** (`POST /api/encargado/fichas/:codigo/cobrar`), cuando el conductor eligió efectivo.
+- **Verificar ficha** (`.../verificar`), cuando el pago ya está confirmado.
+- **Marcar como pagada** (`.../pagada`), después de verificar.
+
+Cada acción pide confirmación. Una ficha anulada (la reserva venció o se canceló) avisa y no permite acciones. Solo se ven las fichas de tu sector.
+
+**Lugares y salidas.** Pulsa «Actualizar» para consultar tu sector. Cuando un vehículo salga, usa «Registrar salida» en la fila del lugar y confirma. La vista pública detecta el cambio en su próxima consulta de disponibilidad.
 
 En producción, configura el servidor de archivos estáticos para servir `index.html` también al abrir `/encargado`.
