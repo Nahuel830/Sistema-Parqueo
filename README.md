@@ -32,13 +32,17 @@ El conductor (sin necesidad de login) ingresa al sistema, elige un sector, ve en
 
 ## Documentación
 
-Cada documento se encuentra en su propia rama:
-
-| Documento | Rama | Archivo |
-|---|---|---|
-| Requerimientos funcionales | `requerimientos-funcionales` | `docs/requerimientos-funcionales.md` |
-| Requerimientos no funcionales | `requerimientos-no-funcionales` | `docs/requerimientos-no-funcionales.md` |
-| Actores | `actores` | `docs/actores.md` |
+| Documento | Archivo |
+|---|---|
+| Requerimientos funcionales | [`requisitos/requerimientos-funcionales.md`](requisitos/requerimientos-funcionales.md) |
+| Requerimientos no funcionales | [`requisitos/requerimientos-no-funcionales.md`](requisitos/requerimientos-no-funcionales.md) |
+| Actores | [`requisitos/actores.md`](requisitos/actores.md) |
+| Diagramas (casos de uso, flujos, arquitectura, estados y base de datos) | [`diagramas/`](diagramas/) |
+| Modelos de la base de datos | [`modelos-base-de-datos/`](modelos-base-de-datos/) |
+| Cronograma | [`cronograma.md`](cronograma.md) |
+| Tablero de Jira | [`enlace Jira/`](enlace%20Jira/) |
+| Backend y entrega del Trío B | [`AVANCE TRÍO B/`](AVANCE%20TR%C3%8DO%20B/) |
+| Frontend | [`frontend/`](frontend/) |
 
 
 ## Definiciones, acrónimos y abreviaturas
