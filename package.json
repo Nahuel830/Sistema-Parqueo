@@ -1,0 +1,28 @@
+{
+  "name": "parqueo",
+  "version": "1.0.0",
+  "description": "Sistema web para consultar, reservar y pagar espacios de parqueo tarifado en sectores de la ciudad de Tarija donde cobra la Alcaldía.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "install:all": "npm install && npm --prefix \"AVANCE TRÍO B/backend\" install && npm --prefix frontend install",
+    "dev": "concurrently -n API,WEB -c green,cyan \"npm --prefix \\\"AVANCE TRÍO B/backend\\\" run dev\" \"npm --prefix frontend run dev\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nahuel830/Sistema-Parqueo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Nahuel830/Sistema-Parqueo/issues"
+  },
+  "homepage": "https://github.com/Nahuel830/Sistema-Parqueo#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.7"
+  }
+}

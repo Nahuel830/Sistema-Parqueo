@@ -18,7 +18,14 @@ function manejadorErrores(error, req, res, next) {
   ];
 
   if (erroresDeConexion.includes(error.code)) {
-    console.error('Error de conexión con PostgreSQL:', error.code);
+    const pistas = {
+      '28P01': 'Revisa DB_PASSWORD en backend/.env y que PostgreSQL esté encendido.',
+      '3D000': 'La base de datos no existe. Créala y aplica db/schema.sql.',
+      '57P03': 'PostgreSQL está iniciando. Espera unos segundos y vuelve a intentarlo.',
+      ECONNREFUSED: 'No se pudo conectar a PostgreSQL. Verifica que el servicio esté corriendo en el puerto indicado en backend/.env.',
+    };
+    const pista = pistas[error.code] || 'Revisa la configuración de la base de datos en backend/.env.';
+    console.error(`\n[BD] Error ${error.code}: ${pista}`);
     return res.status(503).json({
       ok: false,
       mensaje: 'No se pudo conectar a la base de datos',
