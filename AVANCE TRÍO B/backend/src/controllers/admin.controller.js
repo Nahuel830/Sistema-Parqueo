@@ -8,6 +8,7 @@ module.exports = {
   cancelaciones: asyncHandler(async (req, res) => enviar(res, 'Cancelaciones y expiraciones', await s.listarCancelaciones(req.query))),
   pagos: asyncHandler(async (req, res) => enviar(res, 'Pagos y fichas', await s.listarPagos(req.query))),
   resumen: asyncHandler(async (req, res) => enviar(res, 'Resumen de ingresos, ocupación y cancelaciones', await s.resumen(req.query))),
+  bitacora: asyncHandler(async (req, res) => enviar(res, 'Bitácora de acciones', await s.listarBitacora(req.query))),
   tarifas: asyncHandler(async (req, res) => enviar(res, 'Tarifas vigentes', await s.listarTarifas())),
   cambiarTarifa: asyncHandler(async (req, res) => enviar(res, 'Tarifa actualizada', await s.cambiarTarifa(req.usuario, req.params.idSector, (req.body || {}).monto))),
   encargados: asyncHandler(async (req, res) => enviar(res, 'Encargados', await s.listarEncargados())),
