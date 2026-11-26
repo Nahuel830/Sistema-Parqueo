@@ -1,24 +1,23 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 
-const imagenConfigurada = import.meta.env.VITE_QR_IMAGEN?.trim();
 const moneda = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const horaBolivia = new Intl.DateTimeFormat('es-BO', {
   dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/La_Paz',
 });
 
-function ImagenQr({ codigo }) {
-  const [imagen, setImagen] = useState(imagenConfigurada || '');
+function ImagenQr({ codigo, imagenQr }) {
+  const [imagen, setImagen] = useState(imagenQr || '');
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (imagenConfigurada) return;
+    if (imagenQr) return;
     let activo = true;
     QRCode.toDataURL(codigo, { width: 256, margin: 3 })
       .then((datos) => { if (activo) setImagen(datos); })
       .catch(() => { if (activo) setError(true); });
     return () => { activo = false; };
-  }, [codigo]);
+  }, [codigo, imagenQr]);
 
   if (error) return <p className="subtitulo" role="status">No se pudo mostrar la imagen del QR.</p>;
   if (!imagen) return <p className="subtitulo" role="status">Preparando la imagen del QR…</p>;
@@ -63,7 +62,8 @@ export default function PanelPago({ gestionPago, reserva, segundos, cancelando }
           <p className="monto-pago"><span>Monto a pagar</span><strong>{moneda.format(Number(reserva.monto))} Bs</strong></p>
           {qr ? (
             <>
-              <ImagenQr key={qr.codigoQr} codigo={qr.codigoQr} />
+              <ImagenQr key={qr.imagenQr || qr.codigoQr} codigo={qr.codigoQr} imagenQr={qr.imagenQr} />
+              {qr.simulado && <p className="subtitulo">QR de prueba. No realiza un cobro.</p>}
               <p className="subtitulo" role="status">Esperando confirmación del pago por QR.</p>
             </>
           ) : (

@@ -25,6 +25,10 @@ function manejadorErrores(error, req, res, next) {
     });
   }
 
+  if (error.code === 'PASARELA_NO_DISPONIBLE') {
+    return res.status(503).json({ ok: false, mensaje: error.message });
+  }
+
   const estado = error.status || 500;
 
   if (estado >= 500) {

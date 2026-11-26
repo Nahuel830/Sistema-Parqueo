@@ -21,6 +21,7 @@ const assert = require('node:assert/strict');
 const bcrypt = require('bcrypt');
 const { pool, cerrarPool } = require('../../src/config/db');
 const { crearApp } = require('../../src/app');
+const { config } = require('../../src/config/env');
 const { expirarReservasPendientes } = require('../../src/services/reservas.service');
 
 const CLAVE_ENC = 'Clave-Enc-Prueba-1';
@@ -236,4 +237,133 @@ test('bitacora_Acciones_QuedanRegistradasConSuResponsable', async () => {
     `SELECT COUNT(*) FILTER (WHERE id_usuario IS NOT NULL)::int AS con_usuario, COUNT(*)::int AS total FROM bitacora`
   );
   assert.ok(rows[0].total > 20 && rows[0].con_usuario > 5);
+});
+
+test('catálogo del administrador, visibilidad pública y protección de reservas', async () => {
+  const token = await login('admin', CLAVE_ADM);
+  const sector = await api('POST', '/admin/sectores', { token, body: { nombre: 'Sector de prueba', monto: '2.50' } });
+  assert.equal(sector.status, 201);
+  const ruta = `/admin/sectores/${sector.json.datos.id}`;
+  const alta = await api('POST', `${ruta}/lugares`, { token, body: { numero: 1 } });
+  assert.equal(alta.status, 201);
+  const id = alta.json.datos.id;
+  assert.equal((await api('POST', `${ruta}/lugares`, { token, body: { numero: 1 } })).status, 409);
+  const reserva = await reservar(id);
+  assert.equal(reserva.json.datos.monto, '2.50');
+  assert.equal((await api('PATCH', ruta, { token, body: { activo: false } })).status, 409);
+  assert.equal((await api('PATCH', `${ruta}/lugares/${id}`, { token, body: { activo: false } })).status, 409);
+  await api('POST', `/reservas/${reserva.json.datos.id}/cancelar`, { headers: conToken(reserva) });
+  assert.equal((await api('PATCH', `${ruta}/lugares/${id}`, { token, body: { numero: 8, activo: false } })).status, 200);
+  const catalogo = await api('GET', `${ruta}/lugares`, { token });
+  assert.equal(catalogo.json.datos.sector.totalLugares, 0);
+  assert.equal(catalogo.json.datos.lugares[0].numero, 8);
+  assert.equal((await reservar(id)).status, 404);
+  assert.equal((await api('PATCH', ruta, { token, body: { nombre: 'Sector histórico', activo: false } })).status, 200);
+  assert.ok(!(await api('GET', '/sectores')).json.datos.some(({ id }) => id === sector.json.datos.id));
+});
+
+test('salida en el sector asignado, bitácora y protección contra una solicitud atrasada', async () => {
+  const token = await login('encargado1', CLAVE_ENC);
+  const adm = await login('admin', CLAVE_ADM);
+  const lugares = (await api('GET', '/encargado/lugares', { token })).json.datos.lugares;
+  const ocupado = lugares.find(({ id }) => id === 9);
+  const liberar = (id, idReserva) => api('POST', `/encargado/lugares/${id}/liberar`, { token, body: { idReserva } });
+  assert.equal(ocupado.estado, 'OCUPADO');
+  assert.equal((await liberar(21, ocupado.idReserva)).status, 404);
+  assert.equal((await liberar(9, ocupado.idReserva)).status, 200);
+  const nueva = await reservar(9);
+  const idNueva = nueva.json.datos.id;
+  const pago = await api('POST', `/reservas/${idNueva}/pago`, { headers: conToken(nueva), body: { metodo: 'EFECTIVO' } });
+  assert.equal((await api('POST', `/encargado/fichas/${pago.json.datos.ficha.codigo}/cobrar`, { token })).status, 200);
+  assert.equal((await liberar(9, ocupado.idReserva)).status, 409);
+  const registros = (await api('GET', '/admin/bitacora', { token: adm })).json.datos;
+  assert.ok(registros.some(({ accion, idEntidad, responsable }) =>
+    accion === 'LIBERACION_POR_SALIDA' && idEntidad === 9 && responsable === 'Encargado Plaza Sucre'));
+  assert.equal((await liberar(9, idNueva)).status, 200);
+  const { rows } = await pool.query("SELECT id_reserva FROM pago WHERE estado = 'CONFIRMADO' AND id_reserva IN ($1, $2)", [ocupado.idReserva, idNueva]);
+  assert.equal(rows.length, 2);
+});
+
+test('reporte filtrado para administrador con adjuntos PDF y XLSX', async () => {
+  const token = await login('admin', CLAVE_ADM);
+  const ruta = '/admin/reportes/resumen';
+  const filtros = '?idSector=1';
+  const consulta = await api('GET', ruta + filtros, { token });
+  assert.ok(consulta.json.datos.ocupacionActual.every(({ sector }) => sector === 'Plaza Sucre'));
+  assert.ok(consulta.json.datos.ingresosPorSectorYMetodo.some(({ metodo }) => metodo === 'QR'));
+  assert.ok(consulta.json.datos.ingresosPorSectorYMetodo.some(({ metodo }) => metodo === 'EFECTIVO'));
+  assert.equal((await api('GET', ruta + '?desde=2026-02-30', { token })).status, 400);
+  assert.equal((await api('GET', ruta + '/pdf')).status, 401);
+  for (const [formato, firma, tipo] of [
+    ['pdf', '%PDF-', 'application/pdf'],
+    ['xlsx', 'PK', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  ]) {
+    const respuesta = await fetch(`${base}/api${ruta}/${formato}${filtros}`, { headers: { authorization: `Bearer ${token}` } });
+    assert.equal(respuesta.status, 200);
+    assert.equal(respuesta.headers.get('content-type'), tipo);
+    assert.match(respuesta.headers.get('content-disposition'), new RegExp(`reporte-parqueo\\.${formato}`));
+    assert.ok(Buffer.from(await respuesta.arrayBuffer()).toString('ascii', 0, firma.length).startsWith(firma));
+  }
+});
+
+test('Red Enlace verifica el QR con la pasarela y reconoce un pago en plazo aunque llegue después', async (t) => {
+  const pasarela = config.pasarela;
+  const redEnlaceOriginal = { ...pasarela.redEnlace };
+  const proveedorOriginal = pasarela.proveedor;
+  const origen = 'https://redenlace.prueba';
+  Object.assign(pasarela.redEnlace, { base: origen, basic: 'prueba', cliente: 'local', establecimiento: 1,
+    nombre: 'Prueba', webhook: 'https://parqueo.prueba/api/pagos/qr/confirmar' });
+  pasarela.proveedor = 'redenlace';
+  t.after(() => {
+    Object.assign(pasarela.redEnlace, redEnlaceOriginal);
+    pasarela.proveedor = proveedorOriginal;
+  });
+
+  let fechaPago, comprobado;
+  let montoVerificado;
+  const fetchOriginal = globalThis.fetch;
+  t.mock.method(globalThis, 'fetch', (url, opciones) => {
+    if (!url.startsWith(origen)) return fetchOriginal(url, opciones);
+    if (url.includes('oauth-client-credentials')) return Response.json({ access_token: 'local', expires_in: 3600 });
+    const referencia = '12345678';
+    if (url.endsWith('/generate')) {
+      const datos = JSON.parse(opciones.body);
+      assert.equal(datos.moneda, 'BOB');
+      assert.ok(datos.vigencia < 300);
+      assert.equal(datos.webhook.key, 'x-pasarela-secret');
+      comprobado = { numeroReferencia: referencia, numeroReferenciaOriginante: datos.numeroReferencia, moneda: 'BOB', monto: datos.monto };
+      return Response.json({ success: true, data: { ...comprobado, estado: 'PENDIENTE', qr: 'iVBORw0KGgoAAA=' } });
+    }
+    assert.ok(url.endsWith(`/verify/${referencia}`));
+    return Response.json({ success: true, data: {
+      ...comprobado,
+      importe: montoVerificado,
+      estado: 'PAGADO',
+      bancoOrigen: { fechaTransaccion: fechaPago },
+    } });
+  });
+  const reserva = await reservar(13);
+  const id = reserva.json.datos.id;
+  const inicio = await api('POST', `/reservas/${id}/pago`, { body: { metodo: 'QR' }, headers: conToken(reserva) });
+  assert.equal(inicio.status, 201);
+  assert.match(inicio.json.datos.imagenQr, /^data:image\/png;base64,/);
+  const webhook = (secreto) => api('POST', '/pagos/qr/confirmar', {
+    body: { numeroReferencia: comprobado.numeroReferencia, monto: comprobado.monto },
+    headers: { 'x-pasarela-secret': secreto },
+  });
+  assert.equal((await webhook('incorrecto')).status, 403);
+  const { rows: [res] } = await pool.query(
+    "UPDATE reserva SET fecha_expiracion = fecha_inicio + INTERVAL '1 millisecond' WHERE id_reserva = $1 RETURNING fecha_inicio", [id]
+  );
+  fechaPago = res.fecha_inicio.toISOString();
+  montoVerificado = comprobado.monto + 1;
+  assert.equal((await webhook(SECRETO_PASARELA)).status, 503);
+  assert.equal((await api('GET', `/reservas/${id}/ficha`, { headers: conToken(reserva) })).status, 404);
+  montoVerificado = comprobado.monto;
+  await expirarReservasPendientes();
+  assert.equal((await webhook(SECRETO_PASARELA)).status, 200);
+  const ficha = await api('GET', `/reservas/${id}/ficha`, { headers: conToken(reserva) });
+  assert.equal(ficha.json.datos.estadoPago, 'CONFIRMADO');
+  const { rows: [estado] } = await pool.query('SELECT estado FROM lugar WHERE id_lugar = 13');
+  assert.equal(estado.estado, 'OCUPADO');
 });

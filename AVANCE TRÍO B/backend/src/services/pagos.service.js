@@ -2,32 +2,8 @@ const crypto = require('node:crypto');
 const { pool } = require('../config/db');
 const { config } = require('../config/env');
 const { tokenValido } = require('../utils/seguridadReserva');
-
-function errorHttp(status, mensaje) {
-  const error = new Error(mensaje);
-  error.status = status;
-  return error;
-}
-
-function idValido(valor) {
-  const n = Number(valor);
-  return Number.isSafeInteger(n) && n > 0 ? n : null;
-}
-
-async function transaccion(trabajo) {
-  const cliente = await pool.connect();
-  try {
-    await cliente.query('BEGIN');
-    const resultado = await trabajo(cliente);
-    await cliente.query('COMMIT');
-    return resultado;
-  } catch (error) {
-    try { await cliente.query('ROLLBACK'); } catch (_) { /* conexión inestable */ }
-    throw error;
-  } finally {
-    cliente.release();
-  }
-}
+const { errorHttp, idValido, transaccion } = require('../utils/http');
+const redenlace = require('./redenlace.service');
 
 // Orden de bloqueos (igual que en reservas): lugar -> reserva -> pago.
 async function bloquearReserva(cliente, idReserva, idLugar) {
@@ -46,7 +22,7 @@ async function reservaVigente(cliente, reserva) {
   if (reserva.estado !== 'ACTIVA') {
     return { codigo: 409, mensaje: 'La reserva ya no está activa' };
   }
-  const { rows } = await cliente.query('SELECT $1::timestamptz > NOW() AS vigente', [reserva.fecha_expiracion]);
+  const { rows } = await cliente.query('SELECT $1::timestamptz > clock_timestamp() AS vigente', [reserva.fecha_expiracion]);
   if (!rows[0].vigente) return { codigo: 410, mensaje: 'La reserva venció; el lugar se libera en segundos' };
   return null;
 }
@@ -190,10 +166,15 @@ async function iniciarPago(id, token, metodo) {
         return {
           codigo: 200,
           mensaje: 'Ya existe un código QR de pago para esta reserva',
-          datos: { pago: formatearPago(vigente), codigoQr: vigente.codigo_qr },
+          datos: datosQr(vigente),
         };
       }
-      // Cambia de QR a efectivo: el QR pendiente deja de ser válido.
+      if (vigente.proveedor_qr === 'RED_ENLACE') {
+        const conciliado = await conciliarRedEnlace(cliente, reserva, vigente, true);
+        if (conciliado) return conciliado;
+        const vencimiento = await reservaVigente(cliente, reserva);
+        if (vencimiento) return vencimiento;
+      }
       await cliente.query(`UPDATE pago SET estado = 'RECHAZADO' WHERE id_pago = $1`, [vigente.id_pago]);
       await cliente.query(
         `INSERT INTO bitacora (entidad, id_entidad, accion, estado_anterior, estado_nuevo)
@@ -203,12 +184,21 @@ async function iniciarPago(id, token, metodo) {
     }
 
     if (metodoNorm === 'QR') {
-      const referencia = crypto.randomBytes(12).toString('hex');
-      const codigoQr = `PARQUEO-TARIJA|RESERVA:${reserva.id_reserva}|MONTO:${reserva.monto}BOB|REF:${referencia}`;
+      const esRedEnlace = config.pasarela.proveedor === 'redenlace';
+      if (!esRedEnlace && (config.pasarela.proveedor !== 'simulada' || !config.pasarela.secreto)) {
+        return { codigo: 503, mensaje: 'El pago por QR no está configurado. Puedes pagar en efectivo.' };
+      }
+      let referencia, codigoQr;
+      if (esRedEnlace) {
+        ({ referencia, codigoQr } = await redenlace.generarQr(reserva));
+      } else {
+        referencia = crypto.randomBytes(12).toString('hex');
+        codigoQr = `PARQUEO-TARIJA|RESERVA:${reserva.id_reserva}|MONTO:${reserva.monto}BOB|REF:${referencia}`;
+      }
       const { rows } = await cliente.query(
-        `INSERT INTO pago (id_reserva, metodo, monto, estado, codigo_qr, referencia_pasarela)
-         VALUES ($1, 'QR', $2, 'PENDIENTE', $3, $4) RETURNING *`,
-        [reserva.id_reserva, reserva.monto, codigoQr, referencia]
+        `INSERT INTO pago (id_reserva, metodo, monto, estado, codigo_qr, referencia_pasarela, proveedor_qr)
+         VALUES ($1, 'QR', $2, 'PENDIENTE', $3, $4, $5) RETURNING *`,
+        [reserva.id_reserva, reserva.monto, codigoQr, referencia, esRedEnlace ? 'RED_ENLACE' : null]
       );
       await cliente.query(
         `INSERT INTO bitacora (entidad, id_entidad, accion, estado_anterior, estado_nuevo)
@@ -218,7 +208,7 @@ async function iniciarPago(id, token, metodo) {
       return {
         codigo: 201,
         mensaje: 'Código QR generado; paga antes de que termine la reserva',
-        datos: { pago: formatearPago(rows[0]), codigoQr, referencia },
+        datos: datosQr(rows[0]),
       };
     }
 
@@ -241,17 +231,71 @@ async function iniciarPago(id, token, metodo) {
   });
 }
 
-// Confirmación del banco/pasarela (simulada con un secreto compartido).
-// Es idempotente: confirmar dos veces devuelve la misma ficha.
-async function confirmarPagoQr(referencia) {
-  if (typeof referencia !== 'string' || !/^[a-f0-9]{24}$/.test(referencia)) {
+function datosQr(pago) {
+  return pago.proveedor_qr === 'RED_ENLACE'
+    ? { pago: formatearPago(pago), imagenQr: `data:image/png;base64,${pago.codigo_qr}` }
+    : { pago: formatearPago(pago), codigoQr: pago.codigo_qr, referencia: pago.referencia_pasarela, simulado: true };
+}
+
+async function confirmarEnBd(cliente, reserva, pago, fechaPago = null) {
+  const { rows: [confirmado] } = await cliente.query(
+    `UPDATE pago SET estado = 'CONFIRMADO', fecha_pago = COALESCE($2::timestamptz, NOW())
+      WHERE id_pago = $1 RETURNING *`, [pago.id_pago, fechaPago]
+  );
+  await cliente.query("UPDATE reserva SET estado = 'PAGADA', fecha_cierre = NOW() WHERE id_reserva = $1", [reserva.id_reserva]);
+  await cliente.query("UPDATE lugar SET estado = 'OCUPADO' WHERE id_lugar = $1", [reserva.id_lugar]);
+  const ficha = await emitirFicha(cliente, reserva, pago.id_pago);
+  await cliente.query(
+    `INSERT INTO bitacora (entidad, id_entidad, accion, estado_anterior, estado_nuevo)
+     VALUES ('PAGO', $1, 'CONFIRMACION_QR', 'PENDIENTE', 'CONFIRMADO'),
+            ('RESERVA', $2, 'PAGO_CONFIRMADO', 'ACTIVA', 'PAGADA'),
+            ('LUGAR', $3, 'OCUPADO_POR_PAGO', 'RESERVADO', 'OCUPADO')`,
+    [pago.id_pago, reserva.id_reserva, reserva.id_lugar]
+  );
+  return {
+    codigo: 200, mensaje: 'Pago confirmado y ficha emitida',
+    datos: { pago: formatearPago(confirmado), ficha: await consultarFicha(cliente, ficha.id_ficha) },
+  };
+}
+
+async function conciliarRedEnlace(cliente, reserva, pago, cerrar) {
+  const resultado = await (cerrar ? redenlace.cerrarQr(pago) : redenlace.consultarQr(pago));
+  if (resultado.estado !== 'PAGADO') return null;
+  // El proveedor puede informar la hora con precisión de segundos.
+  const inicio = Math.floor(reserva.fecha_inicio.getTime() / 1000) * 1000;
+  if (reserva.estado === 'ACTIVA' && resultado.fechaPago.getTime() >= inicio
+      && resultado.fechaPago <= reserva.fecha_expiracion) {
+    return confirmarEnBd(cliente, reserva, pago, resultado.fechaPago);
+  }
+  await cliente.query("UPDATE pago SET estado = 'RECHAZADO', fecha_pago = $2 WHERE id_pago = $1", [pago.id_pago, resultado.fechaPago]);
+  await cliente.query(
+    `INSERT INTO bitacora (entidad, id_entidad, accion, estado_anterior, estado_nuevo)
+     VALUES ('PAGO', $1, 'QR_REQUIERE_CONCILIACION', 'PENDIENTE', 'RECHAZADO')`, [pago.id_pago]
+  );
+  return { codigo: 409, mensaje: 'El pago quedó registrado para conciliación' };
+}
+
+// Se llama bajo el bloqueo del lugar y de la reserva, antes de liberarlos.
+async function cerrarQrPendiente(cliente, reserva) {
+  const { rows: [pago] } = await cliente.query(
+    `SELECT * FROM pago WHERE id_reserva = $1 AND proveedor_qr = 'RED_ENLACE' AND estado = 'PENDIENTE' FOR UPDATE`,
+    [reserva.id_reserva]
+  );
+  if (!pago) return false;
+  const resultado = await conciliarRedEnlace(cliente, reserva, pago, true);
+  return resultado?.codigo === 200;
+}
+
+async function confirmarPagoQr(referencia, proveedor = null) {
+  const patron = proveedor ? redenlace.REFERENCIA : /^[a-f0-9]{24}$/;
+  if (typeof referencia !== 'string' || !patron.test(referencia)) {
     throw errorHttp(400, 'Referencia de pago inválida');
   }
   const { rows: encontrados } = await pool.query(
     `SELECT p.id_pago, r.id_reserva, r.id_lugar
        FROM pago p JOIN reserva r ON r.id_reserva = p.id_reserva
-      WHERE p.referencia_pasarela = $1 AND p.metodo = 'QR'`,
-    [referencia]
+      WHERE p.referencia_pasarela = $1 AND p.metodo = 'QR' AND p.proveedor_qr IS NOT DISTINCT FROM $2::varchar`,
+    [referencia, proveedor]
   );
   if (!encontrados.length) throw errorHttp(404, 'Pago no encontrado');
   const previo = encontrados[0];
@@ -265,7 +309,16 @@ async function confirmarPagoQr(referencia) {
       const { rows: f } = await cliente.query('SELECT id_ficha FROM ficha WHERE id_pago = $1', [pago.id_pago]);
       return { codigo: 200, mensaje: 'El pago ya estaba confirmado', datos: { pago: formatearPago(pago), ficha: await consultarFicha(cliente, f[0].id_ficha) } };
     }
-    if (pago.estado === 'RECHAZADO') return { codigo: 409, mensaje: 'Este pago fue rechazado' };
+    if (pago.estado === 'RECHAZADO') {
+      if (proveedor) return { codigo: 200, mensaje: 'La notificación ya fue procesada' };
+      return { codigo: 409, mensaje: 'Este pago fue rechazado' };
+    }
+
+    if (proveedor) {
+      const conciliado = await conciliarRedEnlace(cliente, reserva, pago, false);
+      if (!conciliado) return { codigo: 503, mensaje: 'El pago todavía no figura como confirmado en Red Enlace' };
+      return { ...conciliado, codigo: 200 };
+    }
 
     const problema = await reservaVigente(cliente, reserva);
     if (problema) {
@@ -273,28 +326,7 @@ async function confirmarPagoQr(referencia) {
       return { ...problema, mensaje: `${problema.mensaje}. El pago por QR no se aplicó` };
     }
 
-    const { rows: confirmados } = await cliente.query(
-      `UPDATE pago SET estado = 'CONFIRMADO', fecha_pago = NOW() WHERE id_pago = $1 RETURNING *`,
-      [pago.id_pago]
-    );
-    await cliente.query(
-      `UPDATE reserva SET estado = 'PAGADA', fecha_cierre = NOW() WHERE id_reserva = $1`,
-      [reserva.id_reserva]
-    );
-    await cliente.query(`UPDATE lugar SET estado = 'OCUPADO' WHERE id_lugar = $1`, [reserva.id_lugar]);
-    const ficha = await emitirFicha(cliente, reserva, pago.id_pago);
-    await cliente.query(
-      `INSERT INTO bitacora (entidad, id_entidad, accion, estado_anterior, estado_nuevo)
-       VALUES ('PAGO', $1, 'CONFIRMACION_QR', 'PENDIENTE', 'CONFIRMADO'),
-              ('RESERVA', $2, 'PAGO_CONFIRMADO', 'ACTIVA', 'PAGADA'),
-              ('LUGAR', $3, 'OCUPADO_POR_PAGO', 'RESERVADO', 'OCUPADO')`,
-      [pago.id_pago, reserva.id_reserva, reserva.id_lugar]
-    );
-    return {
-      codigo: 200,
-      mensaje: 'Pago confirmado y ficha emitida',
-      datos: { pago: formatearPago(confirmados[0]), ficha: await consultarFicha(cliente, ficha.id_ficha) },
-    };
+    return confirmarEnBd(cliente, reserva, pago);
   });
 }
 
@@ -308,4 +340,4 @@ async function obtenerFichaDeReserva(id, token) {
   return consultarFicha(pool, rows[0].id_ficha);
 }
 
-module.exports = { iniciarPago, confirmarPagoQr, obtenerFichaDeReserva, anularPagoYFicha };
+module.exports = { iniciarPago, confirmarPagoQr, obtenerFichaDeReserva, anularPagoYFicha, cerrarQrPendiente };

@@ -8,6 +8,10 @@ function responder(res, r) {
 const lugares = asyncHandler(async (req, res) => {
   res.json({ ok: true, mensaje: 'Lugares de tu sector', datos: await s.listarLugares(req.usuario) });
 });
+const liberar = asyncHandler(async (req, res) => {
+  const datos = await s.liberarLugar(req.usuario, req.params.id, req.body?.idReserva);
+  res.json({ ok: true, mensaje: 'Salida registrada y lugar liberado', datos });
+});
 const fichas = asyncHandler(async (req, res) => {
   res.json({ ok: true, mensaje: 'Fichas de tu sector', datos: await s.listarFichas(req.usuario, req.query) });
 });
@@ -25,4 +29,4 @@ const leida = asyncHandler(async (req, res) => {
   res.json({ ok: true, mensaje: 'Notificación marcada como leída', datos: await s.marcarNotificacionLeida(req.usuario, req.params.id) });
 });
 
-module.exports = { lugares, fichas, ficha, cobrar, verificar, pagada, notificaciones, leida };
+module.exports = { lugares, liberar, fichas, ficha, cobrar, verificar, pagada, notificaciones, leida };

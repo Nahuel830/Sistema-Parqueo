@@ -12,13 +12,18 @@ function filtros(columnaFecha, { desde, hasta, idSector, extra }) {
   const cond = [];
   for (const [valor, op, nombre] of [[desde, '>=', 'desde'], [hasta, '<=', 'hasta']]) {
     if (valor === undefined || valor === '') continue;
-    if (!FECHA.test(valor)) throw errorHttp(400, `"${nombre}" debe tener el formato AAAA-MM-DD`);
+    const fecha = typeof valor === 'string' && FECHA.test(valor) && !valor.startsWith('0000')
+      ? new Date(`${valor}T00:00:00Z`) : null;
+    if (!fecha || !Number.isFinite(fecha.getTime()) || fecha.toISOString().slice(0, 10) !== valor) {
+      throw errorHttp(400, `"${nombre}" debe ser una fecha válida en formato AAAA-MM-DD`);
+    }
     params.push(valor);
     cond.push(`(${columnaFecha} AT TIME ZONE '${TZ}')::date ${op} $${params.length}::date`);
   }
+  if (desde && hasta && desde > hasta) throw errorHttp(400, 'La fecha desde debe ser anterior o igual a hasta');
   if (idSector !== undefined && idSector !== '') {
     const id = idValido(idSector);
-    if (!id) throw errorHttp(400, 'idSector debe ser un entero positivo');
+    if (!id || id > 2147483647) throw errorHttp(400, 'idSector debe ser un entero positivo válido');
     params.push(id);
     cond.push(`l.id_sector = $${params.length}`);
   }
@@ -85,7 +90,7 @@ async function listarPagos(q) {
   }));
 }
 
-// RF-34: ingresos, ocupación y cobros QR vs efectivo (la exportación a PDF/Excel queda pendiente).
+// RF-34: las fechas se aplican a ingresos y cancelaciones. La ocupación es actual.
 async function resumen(q) {
   const { donde, params } = filtros('p.fecha_pago', q);
   const { rows: ingresos } = await pool.query(
@@ -99,7 +104,9 @@ async function resumen(q) {
   const { rows: ocupacion } = await pool.query(
     `SELECT s.nombre AS sector, l.estado, COUNT(*)::int AS cantidad
        FROM lugar l JOIN sector s ON s.id_sector = l.id_sector
-      WHERE l.activo = TRUE GROUP BY s.nombre, l.estado ORDER BY s.nombre, l.estado`
+      WHERE l.activo AND s.activo ${q.idSector ? 'AND l.id_sector = $1' : ''}
+      GROUP BY s.nombre, l.estado ORDER BY s.nombre, l.estado`,
+    q.idSector ? [idValido(q.idSector)] : []
   );
   const fil = filtros('c.fecha_cancelacion', q);
   const { rows: cancelaciones } = await pool.query(
@@ -108,9 +115,9 @@ async function resumen(q) {
        ${fil.donde} GROUP BY c.tipo ORDER BY c.tipo`,
     fil.params
   );
-  const totalCobrado = ingresos.reduce((a, r) => a + Number(r.total), 0);
+  const totalCentavos = ingresos.reduce((a, r) => a + BigInt(r.total.replace('.', '')), 0n);
   return {
-    totalCobrado: totalCobrado.toFixed(2),
+    totalCobrado: `${totalCentavos / 100n}.${String(totalCentavos % 100n).padStart(2, '0')}`,
     ingresosPorSectorYMetodo: ingresos.map((r) => ({ sector: r.sector, metodo: r.metodo, cantidad: r.cantidad, total: r.total })),
     ocupacionActual: ocupacion.map((r) => ({ sector: r.sector, estado: r.estado, cantidad: r.cantidad })),
     cancelacionesPorTipo: cancelaciones,

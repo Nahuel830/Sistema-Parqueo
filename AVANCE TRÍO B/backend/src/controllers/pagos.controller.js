@@ -29,15 +29,21 @@ function secretoValido(recibido) {
   return crypto.timingSafeEqual(a, b);
 }
 
-// Callback del banco/pasarela: protegido con un secreto compartido.
+// El webhook solo dispara la verificación servidor a servidor en Red Enlace.
 const confirmarQr = asyncHandler(async (req, res) => {
-  if (!config.pasarela.secreto) {
+  const { proveedor, secreto } = config.pasarela;
+  if (proveedor === 'deshabilitada' || !secreto) {
     return res.status(503).json({ ok: false, mensaje: 'La confirmación de pagos QR no está configurada' });
   }
   if (!secretoValido(req.get('x-pasarela-secret'))) {
     return res.status(403).json({ ok: false, mensaje: 'No autorizado para confirmar pagos' });
   }
-  const resultado = await confirmarPagoQr((req.body || {}).referencia);
+  if (proveedor === 'redenlace') {
+    const referencia = req.body?.data?.numeroReferencia ?? req.body?.numeroReferencia;
+    const resultado = await confirmarPagoQr(referencia, 'RED_ENLACE');
+    return res.status(resultado.codigo).json({ ok: resultado.codigo === 200, mensaje: resultado.mensaje });
+  }
+  const resultado = await confirmarPagoQr(req.body?.referencia);
   return responder(res, resultado);
 });
 

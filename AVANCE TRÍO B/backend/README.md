@@ -87,14 +87,15 @@ La API queda disponible en `http://localhost:3000`.
 | GET | `/api/sectores` | Lista los sectores activos con total y cantidad de lugares libres. |
 | GET | `/api/sectores/:id/lugares` | Devuelve el sector y sus lugares ordenados por número, con estado `LIBRE`, `RESERVADO` u `OCUPADO`. |
 | POST | `/api/reservas` | Reserva un lugar por **5 minutos** (`{ "idLugar": 1, "placa": "1234ABC" }`). Devuelve la reserva y un `tokenReserva`. `409` si el lugar no está libre. |
-| GET | `/api/reservas/:id` | Consulta la reserva (header `x-reserva-token`). Si ya venció la marca como `EXPIRADA` y libera el lugar. |
+| GET | `/api/reservas/:id` | Consulta la reserva con `x-reserva-token`. Al vencer, el backend concilia el QR pendiente antes de cerrar la reserva. |
 | POST | `/api/reservas/:id/cancelar` | Cancela dentro de los 5 minutos (header `x-reserva-token`) y libera el lugar. |
-| POST | `/api/reservas/:id/pago` | El conductor elige el pago (`{ "metodo": "QR" }` o `"EFECTIVO"`, header `x-reserva-token`). QR devuelve `codigoQr` y `referencia`; efectivo emite la ficha. |
+| POST | `/api/reservas/:id/pago` | El conductor elige `QR` o `EFECTIVO` con `x-reserva-token`. Red Enlace devuelve `imagenQr` (PNG en una URL de datos). En efectivo se emite la ficha. |
 | GET | `/api/reservas/:id/ficha` | El conductor consulta su ficha electrónica (header `x-reserva-token`). |
-| POST | `/api/pagos/qr/confirmar` | Confirmación del banco/pasarela (`{ "referencia": "..." }`, header `x-pasarela-secret`). Emite la ficha y marca el lugar `OCUPADO`. |
+| POST | `/api/pagos/qr/confirmar` | Webhook con `x-pasarela-secret`. Red Enlace envía `numeroReferencia` en el cuerpo o dentro de `data`. La API verifica la transacción con Red Enlace antes de emitir la ficha. |
 | POST | `/api/auth/login` | Inicia sesión (`{ "username": "...", "password": "..." }`). Devuelve un JWT para el header `Authorization: Bearer <token>`. |
 | GET | `/api/auth/yo` | Datos del usuario con sesión iniciada. |
 | GET | `/api/encargado/lugares` | Lugares de **su** sector con su estado (rol ENCARGADO). |
+| POST | `/api/encargado/lugares/:id/liberar` | Registra una salida con `{ "idReserva": 123 }` a partir de la ocupación actual y deja el lugar `LIBRE`. |
 | GET | `/api/encargado/fichas` | Fichas de su sector. Hoy por defecto; filtros `?estado=` y `?fecha=AAAA-MM-DD` o `todas`. |
 | GET | `/api/encargado/fichas/:codigo` | Detalle de una ficha para compararla con la del conductor. |
 | POST | `/api/encargado/fichas/:codigo/cobrar` | Registra el cobro en efectivo; el lugar pasa a `OCUPADO`. |
@@ -102,9 +103,15 @@ La API queda disponible en `http://localhost:3000`.
 | POST | `/api/encargado/fichas/:codigo/pagada` | Ficha `VERIFICADA` → `PAGADA`. |
 | GET | `/api/encargado/notificaciones` | Fichas nuevas (`?noLeidas=true`). `POST .../:id/leida` la marca como leída. |
 | GET | `/api/admin/lugares` | Estado de los 40 lugares (rol ADMIN). |
+| GET / POST | `/api/admin/sectores` | Lista sectores activos y desactivados. Crea con `nombre`, `descripcion` opcional y `monto` inicial en Bs. |
+| PATCH | `/api/admin/sectores/:idSector` | Edita `nombre`, `descripcion` o `activo`. |
+| GET / POST | `/api/admin/sectores/:idSector/lugares` | Lista los lugares del sector y crea uno con `numero`. |
+| PATCH | `/api/admin/sectores/:idSector/lugares/:id` | Cambia el `numero` o `activo`. |
 | GET | `/api/admin/cancelaciones` | Cancelaciones y expiraciones. Filtros `desde`, `hasta`, `idSector`, `tipo`. |
 | GET | `/api/admin/pagos` | Pagos y fichas. Filtros `desde`, `hasta`, `idSector`, `metodo`. |
 | GET | `/api/admin/reportes/resumen` | Ingresos por sector y método, ocupación y cancelaciones por tipo. |
+| GET | `/api/admin/reportes/resumen/pdf`, `/api/admin/reportes/resumen/xlsx` | Descarga el resumen en PDF o Excel con los mismos filtros. |
+| GET | `/api/admin/bitacora` | Acciones auditadas, incluidos responsable y momento del cambio. |
 | GET / PUT | `/api/admin/tarifas`, `/api/admin/tarifas/:idSector` | Consulta y cambia la tarifa (`{ "monto": "4.50" }`). |
 | GET / POST | `/api/admin/encargados` | Lista y crea encargados. `PATCH /:id` edita o desactiva; `POST /:id/password` restablece la contraseña. |
 
@@ -115,16 +122,26 @@ Las respuestas usan el formato `{ "ok": true, "mensaje": "...", "datos": ... }`.
 Las consultas usan sentencias parametrizadas de PostgreSQL (`$1`, `$2`) para prevenir inyección SQL.
 
 **Pagos y fichas (20 nov).**
-- **QR:** `POST /api/reservas/:id/pago` crea un pago `PENDIENTE` con `codigoQr` (el frontend lo dibuja como imagen). Cuando el banco confirma (`/api/pagos/qr/confirmar`), el pago pasa a `CONFIRMADO`, la reserva a `PAGADA`, el lugar a `OCUPADO` y se emite la **ficha** con código único (`PQ-XXXXXXXXXXXXXXXX`). La confirmación es idempotente y se rechaza si la reserva ya venció (RF-39).
+- **QR:** el pago queda `PENDIENTE` hasta que el proveedor lo verifica. Tras comprobar referencia, importe, moneda y hora bancaria, el backend confirma el pago, marca la reserva `PAGADA`, ocupa el lugar y emite una ficha única. Una confirmación repetida conserva la ficha existente.
 - **Efectivo:** se emite la ficha al elegirlo; el pago queda `PENDIENTE` hasta que el encargado cobre (se agrega con el login, 21 nov). Si el conductor cancela o la reserva vence, la ficha se `ANULA` y el pago se `RECHAZA`.
 - Al emitir una ficha se crea una **notificación** para los encargados activos del sector (RF-19, RF-23) y se registra todo en la **bitácora**.
-- **Confirmación de la pasarela simulada:** no hay banco real conectado. La ruta `/api/pagos/qr/confirmar` está protegida con `PASARELA_SECRET` (mínimo 16 caracteres, en el `.env`); si no está definido responde 503.
+
+### Activar QR con Red Enlace
+
+1. Para una base existente, aplica `db/migraciones/001-pagos-red-enlace.sql` con `psql -v ON_ERROR_STOP=1 -d parqueo_tarija -f db/migraciones/001-pagos-red-enlace.sql`. En una instalación nueva, `db/schema.sql` ya incluye estos cambios.
+2. Configura `PASARELA_PROVEEDOR=redenlace` y un `PASARELA_SECRET` de al menos 16 caracteres. Completa `REDENLACE_URL`, `REDENLACE_BASIC` (valor de la credencial sin el prefijo `Basic`), `REDENLACE_CLIENT_ID`, `REDENLACE_ID_ESTABLECIMIENTO` y `REDENLACE_NOMBRE_ESTABLECIMIENTO`.
+3. Define `REDENLACE_WEBHOOK_URL` con la URL HTTPS accesible para Red Enlace que termina en `/api/pagos/qr/confirmar`. Red Enlace requiere certificación antes de entregar credenciales productivas. [Documentación oficial de QR Simple](https://openhub.redenlace.com.bo/es/products/apis-de-cobro-mediante-qr/cobro-por-qr-simple)
+
+La vigencia del QR reserva cinco segundos de margen respecto del vencimiento local. Si quedan menos de diez segundos de vigencia para el QR, el conductor aún puede elegir efectivo. Al vencer, cancelar o cambiar a efectivo, la API comprueba con la pasarela si se acreditó el QR. Un pago bancario registrado dentro del plazo se aplica aunque la notificación llegue después. Si la pasarela no está disponible, la reserva permanece vinculada al lugar y el barrido vuelve a intentar verificarla. Un cobro que requiere conciliación manual queda en bitácora como `QR_REQUIERE_CONCILIACION`.
+
+Para desarrollo local puedes elegir `PASARELA_PROVEEDOR=simulada` y enviar `{ "referencia": "..." }` al webhook con `x-pasarela-secret`. En este modo la API devuelve `codigoQr`, `referencia` y `simulado: true`. Para operar solo en efectivo usa `PASARELA_PROVEEDOR=deshabilitada`.
 
 **Login y panel del encargado (21 nov).**
 - **Login:** JWT firmado con `JWT_SECRET` (HS256, vence según `JWT_EXPIRES_IN`) y contraseñas con **bcrypt**. Ante un usuario o contraseña incorrectos responde siempre el mismo mensaje. Después de 5 intentos fallidos seguidos (por IP y usuario) bloquea 15 minutos (429).
 - **Cada petición** comprueba el token y que el usuario siga activo: si el administrador lo desactiva, pierde el acceso de inmediato.
 - **Roles:** el panel del encargado exige el rol `ENCARGADO` y todas las consultas se limitan a **su sector**; una ficha de otro sector responde 404.
 - **Efectivo:** `cobrar` → `verificar` → `pagada`. Verificar antes de cobrar responde 409, y cobrar una reserva vencida responde 410.
+- **Salida:** el panel `/encargado` permite actualizar los lugares, elegir uno ocupado y confirmar que salió el vehículo. La API valida el sector y el `idReserva` que devolvió `GET /api/encargado/lugares`. Se conserva el historial de pago y la bitácora registra la salida.
 - **Crear los usuarios iniciales:** `npm run seed:usuarios` crea `admin` y un `encargado<N>` por sector. Las contraseñas se toman de `SEED_PASSWORD_ADMIN` y `SEED_PASSWORD_ENCARGADO`; si no están definidas se generan al azar y se muestran **una sola vez**. No hay contraseñas por defecto.
 
 **Panel del administrador (22 nov).**
@@ -133,7 +150,8 @@ Las consultas usan sentencias parametrizadas de PostgreSQL (`$1`, `$2`) para pre
 - **Tarifas:** al cambiar la tarifa se cierra la anterior y se crea una nueva. Las reservas ya hechas conservan el monto que tenían.
 - **Encargados:** la contraseña debe tener de 8 a 72 caracteres con letras y números. Solo se pueden editar usuarios con rol `ENCARGADO`. Ninguna respuesta incluye contraseñas ni hashes.
 - Cada cambio queda en la bitácora con el administrador responsable.
-- Pendiente: exportar reportes a PDF o Excel (RF-34) y gestionar sectores y lugares (RF-27).
+- **Sectores y lugares:** la desactivación conserva los registros históricos. Un sector con lugares reservados u ocupados sigue activo hasta que se liberen. Solo se pueden desactivar o renumerar lugares libres.
+- **Reportes:** `desde` y `hasta` filtran ingresos y cancelaciones. `idSector` también filtra la ocupación actual. Las descargas están en la pestaña «Reportes» de `/admin`.
 
 ## Estructura
 
@@ -167,7 +185,7 @@ npm run test:integracion # flujo completo contra PostgreSQL real
 La de integración **reinicia las tablas** y por eso solo corre si `DB_NAME` contiene "test". Ejemplo:
 
 ```bash
-DB_NAME=parqueo_test JWT_SECRET=<32 o más caracteres> PASARELA_SECRET=<16 o más caracteres> BCRYPT_ROUNDS=4 npm run test:integracion
+DB_NAME=parqueo_test JWT_SECRET=<32 o más caracteres> PASARELA_PROVEEDOR=simulada PASARELA_SECRET=<16 o más caracteres> BCRYPT_ROUNDS=4 npm run test:integracion
 ```
 
 El resumen completo del estado y de los requerimientos está en [`../ENTREGA.md`](../ENTREGA.md).
@@ -180,6 +198,4 @@ Importa `postman/Sistema-Parqueo.postman_collection.json` en Postman. La variabl
 
 - El script SQL del modelo físico fue **convertido a PostgreSQL** en `db/schema.sql`. Si el Trío A entrega su versión definitiva, hay que comparar y unificar diferencias.
 - Las **tarifas** iniciales (3.00 Bs por sector) son un valor de ejemplo cargado en `db/schema.sql`; hay que confirmar el monto real. El administrador podrá cambiarlas (RF-28).
-- Exportar los reportes a PDF o Excel (RF-34) y crear o editar sectores y lugares (RF-27).
-- Falta definir cómo se **libera** un lugar `OCUPADO` cuando el conductor se va (no está en el cronograma ni en los requerimientos).
-- La integración con el frontend se realiza el 22 de noviembre.
+- La certificación y la activación bancaria dependen de Red Enlace. La prueba automatizada usa respuestas controladas del proveedor.

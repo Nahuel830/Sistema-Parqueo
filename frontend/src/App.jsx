@@ -144,18 +144,28 @@ export default function App() {
 
   useEffect(() => {
     const peticion = new AbortController();
-    let activo = true;
-    const limite = setTimeout(() => peticion.abort(), 5000);
+    let siguiente;
 
-    listarSectores(peticion.signal)
-      .then((datos) => { if (activo) setSectores(datos); })
-      .catch(() => { if (activo) setError(true); })
-      .finally(() => clearTimeout(limite));
+    async function actualizarSectores() {
+      if (!document.hidden) {
+        const signal = AbortSignal.any([peticion.signal, AbortSignal.timeout(5000)]);
+        try {
+          const datos = await listarSectores(signal);
+          if (!peticion.signal.aborted) {
+            setSectores(datos);
+            setError(false);
+          }
+        } catch {
+          if (!peticion.signal.aborted) setError(true);
+        }
+      }
+      if (!peticion.signal.aborted) siguiente = setTimeout(actualizarSectores, 5000);
+    }
 
+    actualizarSectores();
     return () => {
-      activo = false;
-      clearTimeout(limite);
       peticion.abort();
+      clearTimeout(siguiente);
     };
   }, [intento]);
 
@@ -171,6 +181,7 @@ export default function App() {
       <Cabecera>
         <div className="acciones-cabecera">
           <span className="ubicacion">Tarija, Bolivia</span>
+          <a className="enlace-cabecera" href="/encargado">Encargados</a>
           <a className="enlace-cabecera" href="/admin">Administración</a>
         </div>
       </Cabecera>

@@ -1,4 +1,4 @@
-# Frontend público de Parqueo Tarija
+# Frontend de Parqueo Tarija
 
 Vista pública con React, Vite, JSX y CSS para elegir un sector, consultar el plano esquemático y seleccionar un lugar libre.
 
@@ -31,16 +31,20 @@ Durante los cinco minutos, «Cancelar reserva» solicita la liberación mediante
 
 ## Pago y ficha
 
-El panel de reserva muestra el monto y usa `POST /api/reservas/:id/pago` para elegir QR o efectivo. La imagen se genera con el código QR que devuelve la API. El frontend detecta la confirmación consultando `GET /api/reservas/:id/ficha` cada dos segundos mientras espera. La confirmación bancaria corresponde a la pasarela y el backend actual la simula. En efectivo la API emite la ficha para pagar al encargado del sector.
-
-Para usar tu propia imagen, colócala en `public/pagos/qr.png` y define `VITE_QR_IMAGEN=/pagos/qr.png` en `.env.local`. Reinicia Vite o vuelve a compilar. Puedes reemplazar el archivo manteniendo ese nombre o cambiar la variable para indicar otra ruta. Una imagen fija solo sirve para confirmar un pago si la pasarela puede relacionarlo con la reserva que inició la API.
+El panel de reserva muestra el monto y usa `POST /api/reservas/:id/pago` para elegir QR o efectivo. Si el backend está configurado con Red Enlace, muestra el PNG generado para esa reserva. El frontend consulta `GET /api/reservas/:id/ficha` cada dos segundos mientras la API espera la confirmación bancaria. En modo de desarrollo, la pantalla identifica el QR de prueba. En efectivo, la API emite la ficha para pagar al encargado del sector.
 
 «Volver a ver ficha» vuelve a consultar el estado de la ficha. El navegador guarda las referencias de las fichas para poder abrirlas en una visita posterior mientras sigan vigentes.
 
-## Auditoría del administrador
+## Panel del administrador
 
 Entra desde «Administración» o abre `/admin`. El acceso usa `POST /api/auth/login` y requiere una cuenta `ADMIN`. El panel envía el token Bearer a la API y consulta `GET /api/auth/yo` cuando se recarga la página. Al desplegar la app, configura el servidor de archivos estáticos para servir `index.html` al abrir `/admin`.
 
-Cancelaciones usa `GET /api/admin/cancelaciones` con filtros `desde`, `hasta`, `idSector` y `tipo`. Si se llega al límite actual de 500 resultados, acota el rango de fechas. El filtro de sector combina los sectores públicos y los sectores de la lista de lugares del administrador. Un sector histórico sin lugares activos puede quedar fuera del selector con la API actual.
+En «Cancelaciones» puedes filtrar por fechas, sector y tipo. «Bitácora» muestra acciones y responsables desde `GET /api/admin/bitacora`. El selector de sectores incluye los desactivados.
 
-La pestaña Bitácora queda conectada al contrato propuesto `GET /api/admin/bitacora` con autorización `ADMIN`. Espera `datos` como un arreglo de registros con `id`, `fecha` en ISO 8601, `accion`, `entidad`, `idEntidad`, `estadoAnterior`, `estadoNuevo` y `responsable` como texto o `null`. La API aún debe exponer esta consulta y proporcionar el responsable de cada acción. La pestaña indica que la consulta no está disponible si la API responde `404` o `501`.
+En «Sectores y lugares» puedes crear sectores con su tarifa inicial, editar sus datos y crear, renumerar, activar o desactivar lugares. En «Reportes» puedes consultar ingresos por método, ocupación actual y cancelaciones y descargar el resumen filtrado en PDF o Excel.
+
+## Panel del encargado
+
+Entra desde «Encargados» o abre `/encargado` con una cuenta `ENCARGADO`. Pulsa «Actualizar» para consultar tu sector. Cuando un vehículo salga, usa «Registrar salida» en la fila del lugar y confirma. La vista pública detecta el cambio en su próxima consulta de disponibilidad.
+
+En producción, configura el servidor de archivos estáticos para servir `index.html` también al abrir `/encargado`.

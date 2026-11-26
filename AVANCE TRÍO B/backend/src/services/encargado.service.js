@@ -57,12 +57,49 @@ async function fichaPorId(cliente, idFicha) {
 
 async function listarLugares(usuario) {
   const { rows } = await pool.query(
-    `SELECT s.nombre AS sector, l.id_lugar, l.numero, l.estado
-       FROM lugar l JOIN sector s ON s.id_sector = l.id_sector
-      WHERE l.id_sector = $1 AND l.activo = TRUE ORDER BY l.numero`,
+    `SELECT s.nombre AS sector, l.id_lugar, l.numero, l.estado, ocupacion.id_reserva
+       FROM sector s LEFT JOIN lugar l ON l.id_sector = s.id_sector AND l.activo
+       LEFT JOIN LATERAL (
+         SELECT id_reserva FROM reserva WHERE id_lugar = l.id_lugar AND estado = 'PAGADA'
+          ORDER BY id_reserva DESC LIMIT 1
+       ) ocupacion ON l.estado = 'OCUPADO'
+      WHERE s.id_sector = $1 AND s.activo ORDER BY l.numero`,
     [usuario.idSector]
   );
-  return { sector: rows[0] ? rows[0].sector : null, lugares: rows.map((l) => ({ id: l.id_lugar, numero: l.numero, estado: l.estado })) };
+  return {
+    sector: rows[0]?.sector ?? null,
+    lugares: rows.filter((l) => l.id_lugar !== null).map((l) => ({
+      id: l.id_lugar, numero: l.numero, estado: l.estado,
+      ...(l.id_reserva ? { idReserva: l.id_reserva } : {}),
+    })),
+  };
+}
+
+async function liberarLugar(usuario, idCrudo, idReservaCrudo) {
+  const id = idValido(idCrudo);
+  const idReserva = idValido(idReservaCrudo);
+  if (!id || id > 2147483647 || !idReserva || idReserva > 2147483647) {
+    throw errorHttp(400, 'Indica el lugar y la reserva de la ocupación actual');
+  }
+  return transaccion(async (cliente) => {
+    const { rows: [lugar] } = await cliente.query(
+      `SELECT estado FROM lugar WHERE id_lugar = $1 AND id_sector = $2 AND activo FOR UPDATE`,
+      [id, usuario.idSector]
+    );
+    if (!lugar) throw errorHttp(404, 'Lugar no encontrado en tu sector');
+    const { rows: [actual] } = await cliente.query(
+      `SELECT id_reserva FROM reserva WHERE id_lugar = $1 AND estado = 'PAGADA' ORDER BY id_reserva DESC LIMIT 1`, [id]
+    );
+    if (lugar.estado !== 'OCUPADO' || actual?.id_reserva !== idReserva) {
+      throw errorHttp(409, 'La ocupación cambió. Actualiza el estado del lugar');
+    }
+    await cliente.query("UPDATE lugar SET estado = 'LIBRE' WHERE id_lugar = $1", [id]);
+    await cliente.query(
+      `INSERT INTO bitacora (id_usuario, entidad, id_entidad, accion, estado_anterior, estado_nuevo)
+       VALUES ($1, 'LUGAR', $2, 'LIBERACION_POR_SALIDA', 'OCUPADO', 'LIBRE')`, [usuario.id, id]
+    );
+    return { id, idReserva, estado: 'LIBRE' };
+  });
 }
 
 // Por defecto devuelve las fichas de hoy (hora de Bolivia). ?fecha=AAAA-MM-DD o ?fecha=todas.
@@ -205,5 +242,5 @@ async function marcarNotificacionLeida(usuario, id) {
 
 module.exports = {
   listarLugares, listarFichas, obtenerFicha, cobrarEfectivo, verificarFicha,
-  marcarFichaPagada, listarNotificaciones, marcarNotificacionLeida,
+  marcarFichaPagada, listarNotificaciones, marcarNotificacionLeida, liberarLugar,
 };

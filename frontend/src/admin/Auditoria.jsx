@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { consultarBitacora, consultarCancelaciones, consultarSectores } from './apiAdmin.js';
+import Catalogo from './Catalogo.jsx';
+import { consultarBitacora, consultarCancelaciones, consultarReporte, consultarSectores, descargarReporte } from './apiAdmin.js';
 import { useConsultaAdmin } from './useConsultaAdmin.js';
 
 const filtrosVacios = { desde: '', hasta: '', idSector: '', tipo: '' };
@@ -151,7 +152,6 @@ function Cancelaciones({ token, accesoRechazado }) {
 function Bitacora({ token, accesoRechazado }) {
   const cargar = useCallback((signal) => consultarBitacora(token, signal), [token]);
   const consulta = useConsultaAdmin(cargar, accesoRechazado);
-  const pendiente = consulta.error?.status === 404 || consulta.error?.status === 501;
 
   return (
     <section className="panel panel-auditoria" aria-labelledby="titulo-tabla">
@@ -159,11 +159,7 @@ function Bitacora({ token, accesoRechazado }) {
         <h2 id="titulo-tabla">Bitácora de acciones</h2>
         <p>Hora de Bolivia</p>
       </header>
-      {pendiente ? (
-        <p className="estado-auditoria" role="status">La consulta de la bitácora todavía no está disponible.</p>
-      ) : (
-        <EstadoConsulta consulta={consulta} nombre="la bitácora" textoVacio="No hay acciones registradas." />
-      )}
+      <EstadoConsulta consulta={consulta} nombre="la bitácora" textoVacio="No hay acciones registradas." />
       {consulta.datos?.length > 0 && (
         <TablaAuditoria etiqueta="Tabla de acciones" columnas={columnasBitacora} filas={consulta.datos} />
       )}
@@ -171,18 +167,109 @@ function Bitacora({ token, accesoRechazado }) {
   );
 }
 
+const moneda = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatoBolivianos = (monto) => `Bs ${moneda.format(Number(monto))}`;
+const columnasReporte = [
+  ['Ingresos por sector y método', 'ingresosPorSectorYMetodo', [
+    ['Sector', (fila) => fila.sector], ['Método', (fila) => fila.metodo],
+    ['Cobros', (fila) => fila.cantidad], ['Total', (fila) => formatoBolivianos(fila.total)],
+  ]],
+  ['Ocupación actual', 'ocupacionActual', [
+    ['Sector', (fila) => fila.sector], ['Estado', (fila) => fila.estado], ['Lugares', (fila) => fila.cantidad],
+  ]],
+  ['Cancelaciones por tipo', 'cancelacionesPorTipo', [
+    ['Tipo', (fila) => tipos[fila.tipo]], ['Cantidad', (fila) => fila.cantidad],
+  ]],
+];
+
+function Reportes({ token, accesoRechazado }) {
+  const [filtros, setFiltros] = useState({ desde: '', hasta: '', idSector: '' });
+  const [descargando, setDescargando] = useState(null);
+  const [aviso, setAviso] = useState('');
+  const cargarReporte = useCallback((signal) => consultarReporte(token, filtros, signal), [token, filtros]);
+  const cargarSectores = useCallback((signal) => consultarSectores(token, signal), [token]);
+  const reporte = useConsultaAdmin(cargarReporte, accesoRechazado);
+  const sectores = useConsultaAdmin(cargarSectores, accesoRechazado);
+
+  function aplicar(evento) {
+    evento.preventDefault();
+    setAviso('');
+    setFiltros(Object.fromEntries(new FormData(evento.currentTarget)));
+  }
+
+  async function exportar(formato) {
+    if (descargando) return;
+    setDescargando(formato);
+    setAviso('');
+    try {
+      await descargarReporte(token, filtros, formato);
+    } catch (error) {
+      if (error.status === 401 || error.status === 403) accesoRechazado();
+      else setAviso(error.status ? error.message : 'No se pudo descargar el reporte.');
+    } finally {
+      setDescargando(null);
+    }
+  }
+
+  return (
+    <section className="panel panel-gestion" aria-labelledby="titulo-reportes">
+      <div className="encabezado-auditoria"><h2 id="titulo-reportes">Reportes</h2><p>Hora de Bolivia</p></div>
+      <p className="subtitulo">Las fechas filtran los ingresos y las cancelaciones. La ocupación corresponde al momento de la consulta.</p>
+      <form className="formulario-admin filtros-auditoria" onSubmit={aplicar}>
+        <label>Desde<input name="desde" type="date" /></label>
+        <label>Hasta<input name="hasta" type="date" /></label>
+        <label>Sector
+          <select name="idSector">
+            <option value="">Todos</option>
+            {sectores.datos?.map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+          </select>
+        </label>
+        <div className="acciones-filtros">
+          <button className="accion accion-principal" disabled={Boolean(descargando)}>Aplicar filtros</button>
+          <button className="accion" type="button" disabled={!reporte.datos || Boolean(descargando)} onClick={() => exportar('pdf')}>Descargar PDF</button>
+          <button className="accion" type="button" disabled={!reporte.datos || Boolean(descargando)} onClick={() => exportar('xlsx')}>Descargar Excel</button>
+        </div>
+      </form>
+      {descargando && <p role="status">Preparando la descarga…</p>}
+      {aviso && <p className="aviso-admin" role="alert">{aviso}</p>}
+      {sectores.error && <button className="accion" type="button" onClick={sectores.reintentar}>Reintentar carga de sectores</button>}
+      {reporte.error?.status === 400
+        ? <p className="aviso-admin" role="alert">{reporte.error.message}</p>
+        : <EstadoConsulta consulta={reporte} nombre="el resumen" />}
+      {reporte.datos && (
+        <>
+          <p>Total cobrado <strong>{formatoBolivianos(reporte.datos.totalCobrado)}</strong></p>
+          {columnasReporte.map(([titulo, campo, columnas]) => (
+            <section className="grupo-reporte" key={campo}>
+              <h3>{titulo}</h3>
+              {reporte.datos[campo].length
+                ? <TablaAuditoria etiqueta={titulo} columnas={columnas}
+                  filas={reporte.datos[campo].map((fila, id) => ({ ...fila, id }))} />
+                : <p className="subtitulo">Sin registros.</p>}
+            </section>
+          ))}
+        </>
+      )}
+    </section>
+  );
+}
+
 export default function Auditoria({ token, accesoRechazado }) {
   const [seccion, setSeccion] = useState('cancelaciones');
+  const secciones = [
+    ['cancelaciones', 'Cancelaciones', Cancelaciones], ['bitacora', 'Bitácora', Bitacora],
+    ['catalogo', 'Sectores y lugares', Catalogo], ['reportes', 'Reportes', Reportes],
+  ];
+  const Contenido = secciones.find(([id]) => id === seccion)[2];
 
   return (
     <div className="auditoria">
-      <nav className="nav-auditoria" aria-label="Secciones de auditoría">
-        <button className="accion" type="button" aria-pressed={seccion === 'cancelaciones'} onClick={() => setSeccion('cancelaciones')}>Cancelaciones</button>
-        <button className="accion" type="button" aria-pressed={seccion === 'bitacora'} onClick={() => setSeccion('bitacora')}>Bitácora</button>
+      <nav className="nav-auditoria" aria-label="Secciones de administración">
+        {secciones.map(([id, etiqueta]) => (
+          <button key={id} className="accion" type="button" aria-pressed={seccion === id} onClick={() => setSeccion(id)}>{etiqueta}</button>
+        ))}
       </nav>
-      {seccion === 'cancelaciones'
-        ? <Cancelaciones token={token} accesoRechazado={accesoRechazado} />
-        : <Bitacora token={token} accesoRechazado={accesoRechazado} />}
+      <Contenido token={token} accesoRechazado={accesoRechazado} />
     </div>
   );
 }
