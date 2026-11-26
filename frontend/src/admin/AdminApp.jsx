@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Cabecera from '../Cabecera.jsx';
 import { consultarSesion, iniciarSesion } from './apiAdmin.js';
 import Auditoria from './Auditoria.jsx';
-import LugaresEncargado from './LugaresEncargado.jsx';
+import PanelEncargado from './PanelEncargado.jsx';
 import './admin.css';
 
 function recuperarToken(claveSesion) {
@@ -64,7 +64,7 @@ export default function AdminApp({ rol = 'ADMIN' }) {
   const esAdmin = rol === 'ADMIN';
   const claveSesion = esAdmin ? 'parqueo-tarija:sesion-admin' : 'parqueo-tarija:sesion-encargado';
   const titulo = esAdmin ? 'Administración del parqueo' : 'Panel del encargado';
-  const Contenido = esAdmin ? Auditoria : LugaresEncargado;
+  const Contenido = esAdmin ? Auditoria : PanelEncargado;
   const [sesion, setSesion] = useState(() => {
     const token = recuperarToken(claveSesion);
     return token ? { token, usuario: null } : null;

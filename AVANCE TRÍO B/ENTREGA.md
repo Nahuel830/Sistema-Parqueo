@@ -29,7 +29,7 @@ Comprobaciones del avance inicial:
 | Requerimientos | Estado | Notas |
 |---|---|---|
 | RF-01 a RF-15 (conductor) | Implementados en API y frontend | La disponibilidad se consulta cada segundo. La demostración usa QR simulado y los cobros reales quedan pendientes de activación. |
-| RF-16 a RF-25 (encargado) | Disponibles en la API | El panel web consulta los lugares del sector y registra salidas. Las notificaciones, el cobro y la verificación de fichas se operan por API. |
+| RF-16 a RF-25 (encargado) | Implementados en API y panel web | El panel `/encargado` recibe las fichas del sector (con aviso de las nuevas), permite buscarlas por código, registrar el cobro en efectivo, verificarlas y marcarlas como pagadas, y registrar la salida de los vehículos. |
 | RF-26, RF-28 a RF-33 y RF-35 (administrador) | Disponibles en la API | El panel web incluye cancelaciones y bitácora. Las tarifas, los encargados y el listado de pagos se gestionan por API. |
 | RF-34 reportes | Implementado | Resumen de ingresos, ocupación y cancelaciones con descarga PDF y Excel. |
 | RF-27 y RF-40 sectores y lugares | Implementados | El administrador puede crear, editar, desactivar y reactivar desde el panel. |
