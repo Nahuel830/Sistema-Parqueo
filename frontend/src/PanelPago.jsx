@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import { esSectorPalacio } from './datos/sectorPalacio.js';
+
+const MapaPalacio3D = lazy(() => import('./MapaPalacio3D.jsx'));
 
 const moneda = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const horaBolivia = new Intl.DateTimeFormat('es-BO', {
@@ -37,6 +40,13 @@ function Ficha({ datos, ocultar }) {
         <div><dt>Método de pago</dt><dd>{datos.metodo === 'EFECTIVO' ? 'Efectivo' : 'QR'}</dd></div>
         <div className="fecha-ficha"><dt>Fecha y hora</dt><dd><time dateTime={datos.fechaEmision}>{horaBolivia.format(new Date(datos.fechaEmision))}</time></dd></div>
       </dl>
+      {esSectorPalacio(datos.sector) && (
+        <div className="mapa3d-contenedor">
+          <Suspense fallback={<p className="subtitulo">Cargando vista 3D…</p>}>
+            <MapaPalacio3D lugarNumero={datos.numeroLugar} alto={300} />
+          </Suspense>
+        </div>
+      )}
       {datos.estadoPago === 'CONFIRMADO' && <p className="subtitulo" role="status">Pago confirmado.</p>}
       {efectivoPendiente && <p className="subtitulo">Presenta la ficha y paga al encargado del sector.</p>}
       <button className="accion" type="button" onClick={ocultar}>Ocultar ficha</button>
