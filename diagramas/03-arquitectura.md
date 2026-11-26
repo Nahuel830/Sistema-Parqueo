@@ -13,8 +13,8 @@ flowchart LR
 
   subgraph FRONT[Frontend - React + Vite]
     FP[Vista pública:<br/>sectores, plano, reserva,<br/>pago y ficha]
-    FE[Pantalla del encargado<br/>pendiente]
-    FA[Pantalla del administrador<br/>pendiente]
+    FE[Panel del encargado:<br/>fichas, cobro en efectivo,<br/>verificación y salidas]
+    FA[Panel del administrador:<br/>cancelaciones, bitácora,<br/>sectores y lugares, reportes]
   end
 
   subgraph API[API REST - Node.js + Express]

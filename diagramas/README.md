@@ -18,4 +18,4 @@ Aquí están reunidos todos los diagramas del Sistema de Parqueo de Tarija.
 ## Notas
 - Los archivos `01` y `02` son los diagramas del Trío B (casos de uso y flujos); los de `base-de-datos/` son los modelos del Trío A.
 - El diagrama de arquitectura muestra el sistema completo, incluido el panel del administrador de la API.
-- Las pantallas del encargado y del administrador figuran como pendientes porque todavía no se han hecho.
+- El panel del encargado (fichas y salidas) y el del administrador (auditoría, sectores y lugares, reportes) forman parte del frontend.

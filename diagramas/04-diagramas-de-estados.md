@@ -23,10 +23,7 @@ stateDiagram-v2
   LIBRE --> RESERVADO: se crea una reserva
   RESERVADO --> LIBRE: reserva cancelada o expirada
   RESERVADO --> OCUPADO: reserva pagada
-  note right of OCUPADO
-    La liberación de un lugar ocupado
-    no está definida en los requerimientos.
-  end note
+  OCUPADO --> LIBRE: el encargado registra la salida del vehículo
 ```
 
 ## Pago
