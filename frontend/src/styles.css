@@ -172,7 +172,7 @@ button:focus-visible { outline: 3px solid #226654; outline-offset: 3px; }
   .lugar { min-height: 72px; }
 }
 
-/* Visor 3D del Palacio de Justicia */
+/* Visor 3D por sector */
 .mapa3d-contenedor { grid-column: 1 / -1; margin-top: 10px; min-width: 0; }
 .mapa3d { margin-top: 10px; width: 100%; min-width: 0; border-radius: 12px; overflow: hidden; background: #0b1220; }
 .mapa3d__leyenda { margin: 0; padding: 10px 12px; color: #f8fafc; background: rgba(11, 18, 32, .95); font-weight: 600; }

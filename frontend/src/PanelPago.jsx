@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { esSectorPalacio } from './datos/sectorPalacio.js';
+import { configSector3D } from './datos/sectores3d.js';
 
-const MapaPalacio3D = lazy(() => import('./MapaPalacio3D.jsx'));
+const Mapa3D = lazy(() => import('./Mapa3D.jsx'));
 
 const moneda = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const horaBolivia = new Intl.DateTimeFormat('es-BO', {
@@ -40,10 +40,10 @@ function Ficha({ datos, ocultar }) {
         <div><dt>Método de pago</dt><dd>{datos.metodo === 'EFECTIVO' ? 'Efectivo' : 'QR'}</dd></div>
         <div className="fecha-ficha"><dt>Fecha y hora</dt><dd><time dateTime={datos.fechaEmision}>{horaBolivia.format(new Date(datos.fechaEmision))}</time></dd></div>
       </dl>
-      {esSectorPalacio(datos.sector) && (
+      {configSector3D(datos.sector) && (
         <div className="mapa3d-contenedor">
           <Suspense fallback={<p className="subtitulo">Cargando vista 3D…</p>}>
-            <MapaPalacio3D lugarNumero={datos.numeroLugar} alto={300} />
+            <Mapa3D config={configSector3D(datos.sector)} lugarNumero={datos.numeroLugar} alto={300} />
           </Suspense>
         </div>
       )}

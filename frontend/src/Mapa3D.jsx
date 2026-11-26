@@ -2,9 +2,7 @@ import { Component, Suspense, useCallback, useEffect, useMemo, useRef, useState 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import lugaresPalacio from './datos/lugaresPalacio.json';
-
-const RUTA_MODELO = '/modelos/palacio-justicia.glb';
+import { camaraDe } from './datos/sectores3d.js';
 
 function soportaWebGL() {
   try {
@@ -60,8 +58,8 @@ class LimiteErrorModelo extends Component {
   }
 }
 
-function Modelo({ onListo }) {
-  const { scene } = useGLTF(RUTA_MODELO);
+function Modelo({ ruta, onListo }) {
+  const { scene } = useGLTF(ruta);
   const modelo = useMemo(() => scene.clone(true), [scene]);
 
   useEffect(() => {
@@ -71,7 +69,9 @@ function Modelo({ onListo }) {
   return <primitive object={modelo} />;
 }
 
-function Marcador({ lugar, numero }) {
+function Marcador({ lugar, numero, config }) {
+  const { escala = 1, sobreTodo = false } = config.marcador || {};
+  const sinProfundidad = sobreTodo;
   const anillo = useRef(null);
   const textura = useMemo(() => texturaNumero(numero), [numero]);
 
@@ -84,18 +84,18 @@ function Marcador({ lugar, numero }) {
   });
 
   return (
-    <group position={[lugar.x, lugar.y + 0.05, lugar.z]} rotation={[0, THREE.MathUtils.degToRad(lugar.rot || 0), 0]}>
+    <group position={[lugar.x, lugar.y + 0.05, lugar.z]} rotation={[0, THREE.MathUtils.degToRad(lugar.rot || 0), 0]} scale={escala}>
       <mesh ref={anillo} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.6, 2.1, 64]} />
-        <meshBasicMaterial color="#ffd166" transparent opacity={0.95} side={THREE.DoubleSide} depthWrite={false} />
+        <meshBasicMaterial color="#ffd166" transparent opacity={0.95} side={THREE.DoubleSide} depthWrite={false} depthTest={!sinProfundidad} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[1.3, 48]} />
-        <meshBasicMaterial color="#ff4d4f" transparent opacity={0.35} side={THREE.DoubleSide} depthWrite={false} />
+        <meshBasicMaterial color="#ff4d4f" transparent opacity={0.35} side={THREE.DoubleSide} depthWrite={false} depthTest={!sinProfundidad} />
       </mesh>
       <mesh position={[0, 3.2, 0]}>
         <cylinderGeometry args={[0.12, 0.12, 6.4, 12]} />
-        <meshBasicMaterial color="#ff4d4f" transparent opacity={0.85} />
+        <meshBasicMaterial color="#ff4d4f" transparent opacity={0.85} depthTest={!sinProfundidad} />
       </mesh>
       <sprite position={[0, 7.2, 0]} scale={[4.4, 4.4, 1]}>
         <spriteMaterial map={textura} transparent depthTest={false} />
@@ -104,22 +104,23 @@ function Marcador({ lugar, numero }) {
   );
 }
 
-function Enfoque({ lugar }) {
+function Enfoque({ lugar, camara }) {
   const { camera, controls } = useThree();
-  const objetivo = useRef(new THREE.Vector3(0, 0, 0));
-  const camaraDeseada = useRef(new THREE.Vector3(0, 85, 70));
+  const objetivo = useRef(new THREE.Vector3(...camara.objetivo));
+  const camaraDeseada = useRef(new THREE.Vector3(...camara.inicial));
   const restante = useRef(0);
 
   useEffect(() => {
     if (!lugar) {
-      objetivo.current.set(0, 0, 0);
-      camaraDeseada.current.set(0, 85, 70);
+      objetivo.current.set(...camara.objetivo);
+      camaraDeseada.current.set(...camara.inicial);
     } else {
+      const [dx, dy, dz] = camara.enfoque;
       objetivo.current.set(lugar.x, lugar.y, lugar.z);
-      camaraDeseada.current.set(lugar.x, lugar.y + 56, lugar.z + 24);
+      camaraDeseada.current.set(lugar.x + dx, lugar.y + dy, lugar.z + dz);
     }
     restante.current = 1.1;
-  }, [lugar]);
+  }, [lugar, camara]);
 
   useFrame((_, delta) => {
     if (restante.current <= 0 || !controls) return;
@@ -133,7 +134,7 @@ function Enfoque({ lugar }) {
   return null;
 }
 
-function Escena({ lugar, numero, onListo }) {
+function Escena({ config, camara, lugar, numero, onListo }) {
   const controles = useRef(null);
 
   return (
@@ -144,9 +145,9 @@ function Escena({ lugar, numero, onListo }) {
       <directionalLight position={[40, 60, 25]} intensity={1.15} />
       <directionalLight position={[-40, 40, -30]} intensity={0.4} />
       <Suspense fallback={null}>
-        <Modelo onListo={onListo} />
+        <Modelo ruta={config.glb} onListo={onListo} />
       </Suspense>
-      {lugar && <Marcador lugar={lugar} numero={numero} />}
+      {lugar && <Marcador lugar={lugar} numero={numero} config={config} />}
       <OrbitControls
         ref={controles}
         makeDefault
@@ -157,13 +158,14 @@ function Escena({ lugar, numero, onListo }) {
         maxDistance={180}
         maxPolarAngle={Math.PI / 2.05}
       />
-      <Enfoque lugar={lugar} />
+      <Enfoque lugar={lugar} camara={camara} />
     </>
   );
 }
 
-function Respaldo2D({ numero }) {
-  const valores = Object.values(lugaresPalacio);
+function Respaldo2D({ numero, config }) {
+  const lugares = config.lugares;
+  const valores = Object.values(lugares);
   const xs = valores.map((l) => l.x);
   const zs = valores.map((l) => l.z);
   const minX = Math.min(...xs);
@@ -174,10 +176,10 @@ function Respaldo2D({ numero }) {
   const alto = maxZ - minZ || 1;
 
   return (
-    <div className="mapa3d__respaldo" role="img" aria-label={numero ? `Plano 2D: tu lugar es el ${numero}` : 'Plano 2D del Palacio de Justicia'}>
+    <div className="mapa3d__respaldo" role="img" aria-label={numero ? `Plano 2D: tu lugar es el ${numero}` : `Plano 2D de ${config.nombre}`}>
       <p className="mapa3d__respaldo-titulo">Plano 2D (tu navegador no soporta WebGL)</p>
-      <div className="mapa3d__respaldo-plano">
-        {Object.entries(lugaresPalacio).map(([clave, lugar]) => {
+      <div className="mapa3d__respaldo-plano" style={{ aspectRatio: `${ancho} / ${alto}` }}>
+        {Object.entries(lugares).map(([clave, lugar]) => {
           const izquierda = ((lugar.x - minX) / ancho) * 100;
           const arriba = ((lugar.z - minZ) / alto) * 100;
           const activo = String(clave) === String(numero);
@@ -197,17 +199,18 @@ function Respaldo2D({ numero }) {
   );
 }
 
-export default function MapaPalacio3D({ lugarNumero, alto = 340 }) {
+export default function Mapa3D({ config, lugarNumero, alto = 340 }) {
   const [estado, setEstado] = useState('cargando');
   const [webgl] = useState(soportaWebGL);
   const alListo = useCallback(() => setEstado('listo'), []);
   const numero = Number(lugarNumero);
-  const lugar = Number.isFinite(numero) ? lugaresPalacio[String(numero)] : null;
+  const lugar = Number.isFinite(numero) ? config.lugares[String(numero)] : null;
+  const camara = useMemo(() => camaraDe(config), [config]);
 
   if (!webgl) {
     return (
       <div className="mapa3d">
-        <Respaldo2D numero={numero} />
+        <Respaldo2D numero={numero} config={config} />
       </div>
     );
   }
@@ -216,9 +219,9 @@ export default function MapaPalacio3D({ lugarNumero, alto = 340 }) {
     return (
       <div className="mapa3d">
         <p className="mapa3d__error" role="status">
-          No se pudo cargar el modelo 3D del Palacio de Justicia.
+          No se pudo cargar el modelo 3D de {config.nombre}.
         </p>
-        <Respaldo2D numero={numero} />
+        <Respaldo2D numero={numero} config={config} />
       </div>
     );
   }
@@ -229,12 +232,12 @@ export default function MapaPalacio3D({ lugarNumero, alto = 340 }) {
       <div className="mapa3d__canvas" style={{ height: alto }}>
         <LimiteErrorModelo onError={() => setEstado('error')}>
           <Canvas
-            camera={{ position: [0, 85, 70], fov: 45, near: 0.1, far: 1000 }}
+            camera={{ position: camara.inicial, fov: 45, near: 0.1, far: 1000 }}
             dpr={[1, 2]}
             gl={{ antialias: true }}
           >
             <LimiteErrorModelo onError={() => setEstado('error')}>
-              <Escena lugar={lugar} numero={numero} onListo={alListo} />
+              <Escena config={config} camara={camara} lugar={lugar} numero={numero} onListo={alListo} />
             </LimiteErrorModelo>
           </Canvas>
         </LimiteErrorModelo>
@@ -246,5 +249,3 @@ export default function MapaPalacio3D({ lugarNumero, alto = 340 }) {
     </div>
   );
 }
-
-useGLTF.preload(RUTA_MODELO);

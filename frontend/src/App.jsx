@@ -5,9 +5,9 @@ import { useReserva } from './useReserva.js';
 import { usePago } from './usePago.js';
 import PanelPago from './PanelPago.jsx';
 import Cabecera from './Cabecera.jsx';
-import { esSectorPalacio } from './datos/sectorPalacio.js';
+import { configSector3D } from './datos/sectores3d.js';
 
-const MapaPalacio3D = lazy(() => import('./MapaPalacio3D.jsx'));
+const Mapa3D = lazy(() => import('./Mapa3D.jsx'));
 
 const estados = {
   LIBRE: { texto: 'Libre', simbolo: '✓' },
@@ -125,10 +125,10 @@ function PanelReserva({ gestionReserva, gestionPago, idSectorVisible }) {
           <span className="tiempo-reserva" role="timer" aria-labelledby="etiqueta-reloj">{reloj}</span>
         </div>
       )}
-      {reserva && esSectorPalacio(reserva.nombreSector) && !gestionPago.fichaVisible && (
+      {reserva && configSector3D(reserva.nombreSector) && !gestionPago.fichaVisible && (
         <div className="mapa3d-contenedor">
           <Suspense fallback={<p className="subtitulo">Cargando vista 3D…</p>}>
-            <MapaPalacio3D lugarNumero={reserva.numero} />
+            <Mapa3D config={configSector3D(reserva.nombreSector)} lugarNumero={reserva.numero} />
           </Suspense>
         </div>
       )}
