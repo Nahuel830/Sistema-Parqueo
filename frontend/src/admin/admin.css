@@ -1,0 +1,87 @@
+.admin .acceso-admin, .auditoria { margin-top: 16px; }
+.acceso-admin { width: min(100%, 410px); }
+.acceso-admin > .accion { margin-top: 12px; }
+
+.formulario-admin { display: grid; gap: 12px; }
+.acceso-admin .formulario-admin { margin-top: 14px; }
+.formulario-admin label { display: grid; gap: 5px; min-width: 0; color: var(--secundario); font-size: .875rem; font-weight: 700; }
+.formulario-admin input, .formulario-admin select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 9px;
+  border: 1px solid #9ab2a6;
+  border-radius: 8px;
+  background: #fff;
+  color: #172e27;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+.formulario-admin input:focus-visible, .formulario-admin select:focus-visible, .tabla-auditoria:focus-visible {
+  outline: 3px solid #226654;
+  outline-offset: 2px;
+}
+.acceso-admin .accion:disabled, .formulario-admin select:disabled { opacity: .7; cursor: default; }
+.aviso-admin { color: #873833; font-size: .9375rem; }
+.acceso-admin > .aviso-admin { margin-top: 9px; }
+
+.auditoria { display: grid; gap: 12px; }
+.nav-auditoria, .acciones-filtros { display: flex; flex-wrap: wrap; gap: 8px; }
+.nav-auditoria .accion[aria-pressed='true'] { border-color: var(--marca); background: var(--marca); color: #fff; }
+.encabezado-auditoria { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.encabezado-auditoria p, .pie-auditoria { color: var(--secundario); font-size: .875rem; }
+.filtros-auditoria { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-block: 14px; }
+.acciones-filtros { grid-column: 1 / -1; }
+.estado-auditoria { display: grid; justify-items: start; gap: 8px; padding-block: 10px; color: var(--secundario); }
+.encabezado-auditoria + .estado-auditoria, .encabezado-auditoria + .tabla-auditoria { margin-top: 12px; }
+
+.tabla-auditoria { max-width: 100%; overflow-x: auto; border: 1px solid var(--borde); border-radius: 10px; }
+.tabla-auditoria table { width: 100%; min-width: 670px; border-collapse: collapse; text-align: start; }
+.tabla-auditoria th, .tabla-auditoria td { padding: 11px 12px; text-align: start; vertical-align: middle; font-size: .875rem; }
+.tabla-auditoria th { background: #eaf4ec; color: var(--marca); line-height: 1.2; }
+.tabla-auditoria td { border-top: 1px solid var(--borde); line-height: 1.35; }
+.tabla-auditoria tbody tr:nth-child(even) { background: #f8faf7; }
+.tabla-auditoria time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.etiqueta-celda { display: none; }
+.tipo-auditoria { display: inline-block; padding: 3px 8px; border-radius: 6px; background: #e2f3e9; color: #195b43; font-weight: 700; white-space: nowrap; }
+.tipo-auditoria[data-tipo='EXPIRACION'] { background: #f8ebcf; color: #794a12; }
+.pie-auditoria { margin-top: 8px; }
+
+.panel-gestion, .grupo-reporte { display: grid; gap: 12px; }
+.panel-gestion .filtros-auditoria { margin-block: 0; }
+.formulario-gestion, .salida-encargado { padding: 14px; border: 1px solid var(--borde); border-radius: 8px; background: #f8faf7; }
+.formulario-gestion fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; border: 0; padding: 0; }
+.controles-gestion { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.controles-gestion .formulario-admin { flex: 1 1 220px; }
+.lista-gestion { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 8px; list-style: none; padding: 0; }
+.lista-gestion li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid var(--borde); border-radius: 8px; }
+.lista-gestion li span { display: block; color: var(--secundario); font-size: .875rem; }
+.salida-encargado p { margin-bottom: 8px; }
+
+@media (min-width: 760px) {
+  .filtros-auditoria { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 759px) {
+  .tabla-auditoria table, .tabla-auditoria tbody { display: block; min-width: 0; }
+  .tabla-auditoria thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .tabla-auditoria tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding: 12px;
+  }
+  .tabla-auditoria tbody tr + tr { border-top: 1px solid var(--borde); }
+  .tabla-auditoria td { display: block; min-width: 0; padding: 0; border: 0; overflow-wrap: anywhere; }
+  .tabla-auditoria td[data-columna='Fecha y hora'] { grid-column: 1 / -1; }
+  .etiqueta-celda { display: block; margin-bottom: 3px; color: var(--secundario); font-size: .75rem; font-weight: 700; }
+}
+
+@media (max-width: 480px) {
+  .acciones-cabecera .ubicacion { display: none; }
+  .cabecera .marca { flex-shrink: 0; white-space: nowrap; }
+  .cabecera .enlace-cabecera { font-size: .8125rem; }
+  .acciones-cabecera .accion { padding-inline: 8px; font-size: .8125rem; }
+  .barra { padding-block: 6px; }
+}

@@ -1,0 +1,1395 @@
+{
+  "info": {
+    "name": "Sistema de Parqueo - API",
+    "description": "Colección de pruebas de la API REST del Sistema de Parqueo de Tarija. Los endpoints de reservas, pagos, fichas y autenticación se agregan en las siguientes actividades.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Estado",
+      "item": [
+        {
+          "name": "Estado de la API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estado"
+              ]
+            },
+            "description": "Verifica que la API esté en ejecución."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"La API esta operativa\", () => pm.expect(pm.response.json().ok).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estado de PostgreSQL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/estado/bd",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "estado",
+                "bd"
+              ]
+            },
+            "description": "Verifica la conexión con PostgreSQL. Responde 503 mientras la base de datos no esté disponible."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Conecta con la base de datos\", () => pm.expect(pm.response.json().ok).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sectores",
+      "item": [
+        {
+          "name": "Listar sectores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sectores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sectores"
+              ]
+            },
+            "description": "Lista los sectores activos con su total de lugares y lugares libres."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const respuesta = pm.response.json();",
+                  "pm.test(\"Devuelve la lista de sectores\", () => pm.expect(respuesta.datos).to.be.an(\"array\"));",
+                  "pm.test(\"Devuelve 2 sectores\", () => pm.expect(respuesta.datos.length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar lugares de un sector",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sectores/{{idSector}}/lugares",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sectores",
+                "{{idSector}}",
+                "lugares"
+              ]
+            },
+            "description": "Devuelve el sector y sus lugares ordenados por número."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const datos = pm.response.json().datos;",
+                  "pm.test(\"Incluye el sector\", () => pm.expect(datos.sector).to.be.an(\"object\"));",
+                  "pm.test(\"Devuelve 20 lugares\", () => pm.expect(datos.lugares.length).to.eql(20));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reservas",
+      "item": [
+        {
+          "name": "Crear reserva (5 minutos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLugar\": {{idLugar}},\n  \"placa\": \"1234ABC\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas"
+              ]
+            },
+            "description": "Reserva el lugar durante 5 minutos. Guarda idReserva y tokenReserva para las siguientes pruebas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Estado ACTIVA\", () => pm.expect(r.datos.estado).to.eql(\"ACTIVA\"));",
+                  "pm.collectionVariables.set(\"idReserva\", r.datos.id);",
+                  "pm.collectionVariables.set(\"tokenReserva\", r.datos.tokenReserva);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar reserva",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}"
+              ]
+            },
+            "description": "Consulta el estado de la reserva. Requiere el header x-reserva-token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar reserva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}",
+                "cancelar"
+              ]
+            },
+            "description": "Cancela dentro de los 5 minutos y libera el lugar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Queda CANCELADA\", () => pm.expect(pm.response.json().datos.estado).to.eql(\"CANCELADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservar un lugar ya reservado (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idLugar\": {{idLugar}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas"
+              ]
+            },
+            "description": "Debe responder 409 si el lugar no está libre."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 o 409\", () => pm.expect([201, 409]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pagos y fichas",
+      "item": [
+        {
+          "name": "Elegir pago por QR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metodo\": \"QR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}/pago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}",
+                "pago"
+              ]
+            },
+            "description": "Genera el código QR (queda PENDIENTE hasta que el banco confirme). Guarda la referencia."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 o 200\", () => pm.expect([200, 201]).to.include(pm.response.code));",
+                  "const r = pm.response.json();",
+                  "pm.collectionVariables.set(\"referenciaPago\", r.datos.referencia);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirmar pago QR (pasarela)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-pasarela-secret",
+                "value": "{{pasarelaSecret}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"referencia\": \"{{referenciaPago}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pagos/qr/confirmar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pagos",
+                "qr",
+                "confirmar"
+              ]
+            },
+            "description": "Simula la confirmación del banco. Requiere el header x-pasarela-secret (PASARELA_SECRET del .env)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Emite la ficha\", () => pm.expect(pm.response.json().datos.ficha.estado).to.eql(\"EMITIDA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Elegir pago en efectivo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metodo\": \"EFECTIVO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}/pago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}",
+                "pago"
+              ]
+            },
+            "description": "Emite la ficha de inmediato; el encargado cobra en el lugar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Ficha emitida\", () => pm.expect(pm.response.json().datos.ficha.estado).to.eql(\"EMITIDA\"));",
+                  "pm.collectionVariables.set(\"codigoFicha\", pm.response.json().datos.ficha.codigo);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ver ficha de la reserva",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-reserva-token",
+                "value": "{{tokenReserva}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{idReserva}}/ficha",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{idReserva}}",
+                "ficha"
+              ]
+            },
+            "description": "El conductor vuelve a ver su ficha (RF-15)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Autenticación",
+      "item": [
+        {
+          "name": "Iniciar sesión (encargado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{usuarioEncargado}}\",\n  \"password\": \"{{passwordEncargado}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Escribe usuarioEncargado y passwordEncargado en las variables de la colección. Guarda el token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenEncargado\", pm.response.json().datos.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mi sesión",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/yo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "yo"
+              ]
+            },
+            "description": "Datos del usuario con sesión iniciada."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión (administrador)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{usuarioAdmin}}\",\n  \"password\": \"{{passwordAdmin}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Escribe usuarioAdmin y passwordAdmin en las variables de la colección."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenAdmin\", pm.response.json().datos.token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Encargado",
+      "item": [
+        {
+          "name": "Lugares de mi sector",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/lugares",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "lugares"
+              ]
+            },
+            "description": "Estado de los lugares del sector del encargado (RF-18)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fichas de mi sector (hoy)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas"
+              ]
+            },
+            "description": "Fichas del día. Filtros: ?estado=EMITIDA y ?fecha=AAAA-MM-DD o todas (RF-24, RF-25)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de una ficha",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas/{{codigoFicha}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas",
+                "{{codigoFicha}}"
+              ]
+            },
+            "description": "Para compararla con la que muestra el conductor (RF-20)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cobrar efectivo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas/{{codigoFicha}}/cobrar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas",
+                "{{codigoFicha}}",
+                "cobrar"
+              ]
+            },
+            "description": "Registra el cobro en efectivo; el lugar queda OCUPADO (RF-22)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar ficha",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas/{{codigoFicha}}/verificar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas",
+                "{{codigoFicha}}",
+                "verificar"
+              ]
+            },
+            "description": "Marca la ficha como VERIFICADA (RF-21). Exige el pago confirmado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Marcar ficha pagada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/fichas/{{codigoFicha}}/pagada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "fichas",
+                "{{codigoFicha}}",
+                "pagada"
+              ]
+            },
+            "description": "Marca la ficha como PAGADA (RF-21)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenEncargado}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encargado/notificaciones?noLeidas=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encargado",
+                "notificaciones"
+              ],
+              "query": [
+                {
+                  "key": "noLeidas",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Fichas nuevas para el encargado (RF-23)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Administrador",
+      "item": [
+        {
+          "name": "Estado de los 40 lugares",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/lugares",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "lugares"
+              ]
+            },
+            "description": "RF-35."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelaciones y expiraciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/cancelaciones?tipo=EXPIRACION",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "cancelaciones"
+              ],
+              "query": [
+                {
+                  "key": "tipo",
+                  "value": "EXPIRACION"
+                }
+              ]
+            },
+            "description": "Filtros: desde, hasta (AAAA-MM-DD), idSector y tipo (CONDUCTOR o EXPIRACION). RF-31 y RF-32."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagos y fichas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/pagos?metodo=QR",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "pagos"
+              ],
+              "query": [
+                {
+                  "key": "metodo",
+                  "value": "QR"
+                }
+              ]
+            },
+            "description": "Filtros: desde, hasta, idSector y metodo (QR o EFECTIVO). RF-33."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resumen de ingresos y ocupación",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/reportes/resumen",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "reportes",
+                "resumen"
+              ]
+            },
+            "description": "Ingresos por sector y método, ocupación y cancelaciones por tipo. RF-34."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tarifas vigentes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tarifas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tarifas"
+              ]
+            },
+            "description": "RF-28."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cambiar la tarifa de un sector",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monto\": \"4.50\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/tarifas/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "tarifas",
+                "1"
+              ]
+            },
+            "description": "Cierra la tarifa anterior y crea la nueva. RF-28."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar encargados",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/encargados",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "encargados"
+              ]
+            },
+            "description": "RF-29."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear encargado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"encargado.nuevo\",\n  \"nombreCompleto\": \"Nombre Apellido\",\n  \"idSector\": 1,\n  \"password\": \"Clave-Segura-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/encargados",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "encargados"
+              ]
+            },
+            "description": "RF-29 y RF-30."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar o desactivar encargado",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/encargados/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "encargados",
+                "3"
+              ]
+            },
+            "description": "Acepta nombreCompleto, idSector y activo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer contraseña",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"Otra-Clave-77\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/encargados/3/password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "encargados",
+                "3",
+                "password"
+              ]
+            },
+            "description": "RF-29."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 2xx\", () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "idSector",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "idLugar",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "idReserva",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenReserva",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "referenciaPago",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pasarelaSecret",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "usuarioEncargado",
+      "value": "encargado1",
+      "type": "string"
+    },
+    {
+      "key": "passwordEncargado",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenEncargado",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "codigoFicha",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "usuarioAdmin",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "passwordAdmin",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tokenAdmin",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
