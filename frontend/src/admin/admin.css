@@ -85,3 +85,21 @@
   .acciones-cabecera .accion { padding-inline: 8px; font-size: .8125rem; }
   .barra { padding-block: 6px; }
 }
+
+/* Panel del encargado: fichas */
+.detalle-ficha { display: grid; gap: 12px; }
+.datos-ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 10px; margin: 0; }
+.dato-ficha { padding: 10px; border: 1px solid var(--borde); border-radius: 8px; }
+.dato-ficha dt { color: var(--secundario); font-size: .75rem; font-weight: 700; }
+.dato-ficha dd { margin: 3px 0 0; font-size: 1rem; }
+.insignia-estado { display: inline-block; padding: 3px 8px; border-radius: 6px; background: #e2f3e9; color: #195b43; font-size: .8125rem; font-weight: 700; white-space: nowrap; }
+.insignia-estado[data-estado='PENDIENTE'], .insignia-estado[data-estado='EMITIDA'] { background: #f8ebcf; color: #794a12; }
+.insignia-estado[data-estado='ANULADA'], .insignia-estado[data-estado='RECHAZADO'] { background: #f6dedc; color: #873833; }
+.insignia-nuevas { display: inline-block; min-width: 22px; margin-inline-start: 8px; padding: 1px 7px; border-radius: 999px; background: #873833; color: #fff; font-size: .75rem; font-weight: 700; text-align: center; }
+.nav-auditoria .accion[aria-pressed='true'] .insignia-nuevas { background: #fff; color: #873833; }
+.etiqueta-nueva { margin-inline-start: 8px; padding: 2px 6px; border-radius: 6px; background: #873833; color: #fff; font-size: .6875rem; font-weight: 700; }
+.aviso-nuevas { color: #873833; font-weight: 700; }
+.tabla-auditoria tbody tr[data-nueva='true'] { background: #fdf3e3; }
+.tabla-auditoria code { font-size: .8125rem; }
+.opcion-simple { display: flex !important; align-items: center; grid-auto-flow: column; gap: 8px; align-self: end; min-height: 44px; }
+.opcion-simple input { width: 20px; min-height: 20px; }
