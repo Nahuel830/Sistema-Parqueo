@@ -1,6 +1,12 @@
 import { useCallback, useState } from 'react';
 import Catalogo from './Catalogo.jsx';
-import { consultarBitacora, consultarCancelaciones, consultarReporte, consultarSectores, descargarReporte } from './apiAdmin.js';
+import { 
+  consultarBitacora, 
+  consultarCancelaciones, 
+  consultarReporte, 
+  consultarSectores, 
+  descargarReporte 
+} from './apiAdmin.js';
 import { useConsultaAdmin } from './useConsultaAdmin.js';
 
 const filtrosVacios = { desde: '', hasta: '', idSector: '', tipo: '' };
@@ -127,6 +133,7 @@ function Cancelaciones({ token, accesoRechazado }) {
           <button className="accion" type="button" onClick={limpiar}>Limpiar</button>
         </div>
       </form>
+      
       {sectores.error && (
         <div className="estado-auditoria">
           <p className="aviso-admin" role="alert">No se pudieron cargar los sectores para el filtro.</p>

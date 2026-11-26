@@ -3,8 +3,7 @@ import Cabecera from '../Cabecera.jsx';
 import { consultarSesion, iniciarSesion } from './apiAdmin.js';
 import Auditoria from './Auditoria.jsx';
 import PanelEncargado from './PanelEncargado.jsx';
-import GestionEncargados from './GestionEncargados.jsx'; // NUEVO IMPORT
-import Reportes from './Reportes.jsx'; // NUEVO IMPORT
+import GestionEncargados from './GestionEncargados.jsx'; 
 import './admin.css';
 
 function recuperarToken(claveSesion) {
@@ -15,9 +14,7 @@ function guardarToken(claveSesion, token) {
   try {
     if (token) sessionStorage.setItem(claveSesion, token);
     else sessionStorage.removeItem(claveSesion);
-  } catch {
-    // Si el navegador bloquea el almacenamiento, la sesión vive en memoria.
-  }
+  } catch {}
 }
 
 function Acceso({ aviso, alEntrar, rol, titulo }) {
@@ -67,8 +64,8 @@ export default function AdminApp({ rol = 'ADMIN' }) {
   const claveSesion = esAdmin ? 'parqueo-tarija:sesion-admin' : 'parqueo-tarija:sesion-encargado';
   const titulo = esAdmin ? 'Administración del parqueo' : 'Panel del encargado';
   
-  // NUEVO ESTADO PARA LAS PESTAÑAS DEL ADMIN
-  const [pestanaActiva, setPestanaActiva] = useState('auditoria');
+  // Solo 2 pestañas principales
+  const [pestanaActiva, setPestanaActiva] = useState('panel-general');
 
   const [sesion, setSesion] = useState(() => {
     const token = recuperarToken(claveSesion);
@@ -144,20 +141,26 @@ export default function AdminApp({ rol = 'ADMIN' }) {
           </section>
         )}
 
-        {/* RENDERIZADO CONDICIONAL CON PESTAÑAS */}
         {sesion?.usuario && (
           <>
             {esAdmin ? (
               <>
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                  <button className={`accion ${pestanaActiva === 'auditoria' ? 'accion-principal' : ''}`} onClick={() => setPestanaActiva('auditoria')}>Auditoría</button>
-                  <button className={`accion ${pestanaActiva === 'encargados' ? 'accion-principal' : ''}`} onClick={() => setPestanaActiva('encargados')}>Gestión Encargados</button>
-                  <button className={`accion ${pestanaActiva === 'reportes' ? 'accion-principal' : ''}`} onClick={() => setPestanaActiva('reportes')}>Reportes</button>
+                {/* MENÚ PRINCIPAL DEL ADMINISTRADOR */}
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                  <button 
+                    className={`accion ${pestanaActiva === 'panel-general' ? 'accion-principal' : ''}`} 
+                    onClick={() => setPestanaActiva('panel-general')}>
+                    Panel General (Auditoría y Reportes)
+                  </button>
+                  <button 
+                    className={`accion ${pestanaActiva === 'encargados' ? 'accion-principal' : ''}`} 
+                    onClick={() => setPestanaActiva('encargados')}>
+                    Gestión de Encargados
+                  </button>
                 </div>
 
-                {pestanaActiva === 'auditoria' && <Auditoria token={sesion.token} accesoRechazado={accesoRechazado} />}
+                {pestanaActiva === 'panel-general' && <Auditoria token={sesion.token} accesoRechazado={accesoRechazado} />}
                 {pestanaActiva === 'encargados' && <GestionEncargados token={sesion.token} accesoRechazado={accesoRechazado} />}
-                {pestanaActiva === 'reportes' && <Reportes token={sesion.token} accesoRechazado={accesoRechazado} />}
               </>
             ) : (
               <PanelEncargado token={sesion.token} accesoRechazado={accesoRechazado} />
