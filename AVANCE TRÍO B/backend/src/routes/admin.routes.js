@@ -11,6 +11,7 @@ router.get('/lugares', c.lugares);
 router.get('/cancelaciones', c.cancelaciones);
 router.get('/pagos', c.pagos);
 router.get('/reportes/resumen', c.resumen);
+router.get('/bitacora', c.bitacora);
 router.get('/tarifas', c.tarifas);
 router.put('/tarifas/:idSector', c.cambiarTarifa);
 router.get('/encargados', c.encargados);

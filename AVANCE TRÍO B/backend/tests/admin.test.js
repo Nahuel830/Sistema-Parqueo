@@ -33,3 +33,15 @@ test('listarCancelaciones_FechaInvalida_Lanza400', () => falla400(admin.listarCa
 test('listarCancelaciones_TipoInvalido_Lanza400', () => falla400(admin.listarCancelaciones({ tipo: 'XX' })));
 test('listarPagos_MetodoInvalido_Lanza400', () => falla400(admin.listarPagos({ metodo: 'TARJETA' })));
 test('listarPagos_SectorInvalido_Lanza400', () => falla400(admin.listarPagos({ idSector: '-1' })));
+
+test('listarBitacora_FechaDesdeInvalida_Lanza400', () => falla400(admin.listarBitacora({ desde: '2026/11/01' })));
+test('listarBitacora_FechaHastaInvalida_Lanza400', () => falla400(admin.listarBitacora({ hasta: 'ayer' })));
+test('listarBitacora_FechaValida_NoLanzaErrorDeValidacion', async () => {
+  // La fecha AAAA-MM-DD es válida; sin base de datos la consulta falla
+  // por conexión, pero nunca con error 400 de validación.
+  try {
+    await admin.listarBitacora({ desde: '2026-11-01', hasta: '2026-11-30' });
+  } catch (e) {
+    assert.notEqual(e.status, 400);
+  }
+});

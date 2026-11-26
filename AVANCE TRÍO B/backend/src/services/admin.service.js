@@ -117,6 +117,23 @@ async function resumen(q) {
   };
 }
 
+// RF-38: bitácora de acciones del sistema con el responsable cuando existe.
+async function listarBitacora(q = {}) {
+  const { donde, params } = filtros('b.fecha_hora', { desde: q.desde, hasta: q.hasta });
+  const { rows } = await pool.query(
+    `SELECT b.id_bitacora, b.fecha_hora, b.accion, b.entidad, b.id_entidad,
+            b.estado_anterior, b.estado_nuevo, u.nombre_completo AS responsable
+       FROM bitacora b LEFT JOIN usuario u ON u.id_usuario = b.id_usuario
+       ${donde} ORDER BY b.fecha_hora DESC LIMIT 500`,
+    params
+  );
+  return rows.map((r) => ({
+    id: r.id_bitacora, fecha: r.fecha_hora, accion: r.accion, entidad: r.entidad,
+    idEntidad: r.id_entidad, estadoAnterior: r.estado_anterior, estadoNuevo: r.estado_nuevo,
+    responsable: r.responsable,
+  }));
+}
+
 // RF-28
 async function listarTarifas() {
   const { rows } = await pool.query(
@@ -205,7 +222,8 @@ async function crearEncargado(admin, { username, nombreCompleto, idSector, passw
        VALUES ($1, 'USUARIO', $2, 'CREACION_ENCARGADO', NULL, 'ACTIVO')`,
       [admin.id, rows[0].id_usuario]
     );
-    return formatearEncargado({ ...rows[0], sector: null });
+    const { rows: sec } = await cliente.query('SELECT nombre FROM sector WHERE id_sector = $1', [sector]);
+    return formatearEncargado({ ...rows[0], sector: sec[0] ? sec[0].nombre : null });
   });
 }
 
@@ -230,7 +248,8 @@ async function editarEncargado(admin, idCrudo, { nombreCompleto, idSector, activ
        VALUES ($1, 'USUARIO', $2, 'EDICION_ENCARGADO', NULL, $3)`,
       [admin.id, id, rows[0].activo ? 'ACTIVO' : 'DESACTIVADO']
     );
-    return formatearEncargado({ ...rows[0], sector: null });
+    const { rows: sec } = await cliente.query('SELECT nombre FROM sector WHERE id_sector = $1', [rows[0].id_sector]);
+    return formatearEncargado({ ...rows[0], sector: sec[0] ? sec[0].nombre : null });
   });
 }
 
@@ -239,20 +258,22 @@ async function restablecerContrasena(admin, idCrudo, password) {
   if (!id) throw errorHttp(400, 'Identificador de usuario inválido');
   validarContrasena(password);
   const hash = await bcrypt.hash(password, config.bcryptRondas);
-  const { rowCount } = await pool.query(
-    `UPDATE usuario SET password_hash = $2 WHERE id_usuario = $1 AND rol = 'ENCARGADO'`,
-    [id, hash]
-  );
-  if (!rowCount) throw errorHttp(404, 'Encargado no encontrado');
-  await pool.query(
-    `INSERT INTO bitacora (id_usuario, entidad, id_entidad, accion, estado_anterior, estado_nuevo)
-     VALUES ($1, 'USUARIO', $2, 'RESTABLECER_CONTRASENA', NULL, 'CONTRASENA_NUEVA')`,
-    [admin.id, id]
-  );
-  return { id };
+  return transaccion(async (cliente) => {
+    const { rowCount } = await cliente.query(
+      `UPDATE usuario SET password_hash = $2 WHERE id_usuario = $1 AND rol = 'ENCARGADO'`,
+      [id, hash]
+    );
+    if (!rowCount) throw errorHttp(404, 'Encargado no encontrado');
+    await cliente.query(
+      `INSERT INTO bitacora (id_usuario, entidad, id_entidad, accion, estado_anterior, estado_nuevo)
+       VALUES ($1, 'USUARIO', $2, 'RESTABLECER_CONTRASENA', NULL, 'CONTRASENA_NUEVA')`,
+      [admin.id, id]
+    );
+    return { id };
+  });
 }
 
 module.exports = {
-  listarLugares, listarCancelaciones, listarPagos, resumen, listarTarifas, cambiarTarifa,
+  listarLugares, listarCancelaciones, listarPagos, resumen, listarBitacora, listarTarifas, cambiarTarifa,
   listarEncargados, crearEncargado, editarEncargado, restablecerContrasena,
 };
