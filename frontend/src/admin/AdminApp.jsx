@@ -3,6 +3,8 @@ import Cabecera from '../Cabecera.jsx';
 import { consultarSesion, iniciarSesion } from './apiAdmin.js';
 import Auditoria from './Auditoria.jsx';
 import PanelEncargado from './PanelEncargado.jsx';
+import GestionEncargados from './GestionEncargados.jsx'; // NUEVO IMPORT
+import Reportes from './Reportes.jsx'; // NUEVO IMPORT
 import './admin.css';
 
 function recuperarToken(claveSesion) {
@@ -64,7 +66,10 @@ export default function AdminApp({ rol = 'ADMIN' }) {
   const esAdmin = rol === 'ADMIN';
   const claveSesion = esAdmin ? 'parqueo-tarija:sesion-admin' : 'parqueo-tarija:sesion-encargado';
   const titulo = esAdmin ? 'Administración del parqueo' : 'Panel del encargado';
-  const Contenido = esAdmin ? Auditoria : PanelEncargado;
+  
+  // NUEVO ESTADO PARA LAS PESTAÑAS DEL ADMIN
+  const [pestanaActiva, setPestanaActiva] = useState('auditoria');
+
   const [sesion, setSesion] = useState(() => {
     const token = recuperarToken(claveSesion);
     return token ? { token, usuario: null } : null;
@@ -124,6 +129,7 @@ export default function AdminApp({ rol = 'ADMIN' }) {
         </section>
 
         {!sesion && <Acceso aviso={aviso} alEntrar={entrar} rol={rol} titulo={esAdmin ? 'Acceso del administrador' : 'Acceso del encargado'} />}
+        
         {sesion && !sesion.usuario && (
           <section className="panel acceso-admin" aria-label="Sesión">
             {errorSesion ? (
@@ -137,7 +143,27 @@ export default function AdminApp({ rol = 'ADMIN' }) {
             ) : <p role="status">Verificando sesión…</p>}
           </section>
         )}
-        {sesion?.usuario && <Contenido token={sesion.token} accesoRechazado={accesoRechazado} />}
+
+        {/* RENDERIZADO CONDICIONAL CON PESTAÑAS */}
+        {sesion?.usuario && (
+          <>
+            {esAdmin ? (
+              <>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                  <button className={`accion ${pestanaActiva === 'auditoria' ? 'accion-principal' : ''}`} onClick={() => setPestanaActiva('auditoria')}>Auditoría</button>
+                  <button className={`accion ${pestanaActiva === 'encargados' ? 'accion-principal' : ''}`} onClick={() => setPestanaActiva('encargados')}>Gestión Encargados</button>
+                  <button className={`accion ${pestanaActiva === 'reportes' ? 'accion-principal' : ''}`} onClick={() => setPestanaActiva('reportes')}>Reportes</button>
+                </div>
+
+                {pestanaActiva === 'auditoria' && <Auditoria token={sesion.token} accesoRechazado={accesoRechazado} />}
+                {pestanaActiva === 'encargados' && <GestionEncargados token={sesion.token} accesoRechazado={accesoRechazado} />}
+                {pestanaActiva === 'reportes' && <Reportes token={sesion.token} accesoRechazado={accesoRechazado} />}
+              </>
+            ) : (
+              <PanelEncargado token={sesion.token} accesoRechazado={accesoRechazado} />
+            )}
+          </>
+        )}
       </main>
     </>
   );
