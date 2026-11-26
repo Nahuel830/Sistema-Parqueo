@@ -18,7 +18,7 @@
 | 404 | Recurso no encontrado |
 | 409 | Conflicto (lugar no disponible, reserva ya pagada) |
 | 410 | La reserva expiró |
-| 503 | Base de datos no disponible |
+| 503 | Base de datos o pasarela QR no disponible |
 
 ## Endpoints implementados
 
@@ -42,6 +42,7 @@
 | POST | `/api/auth/login` | Login de encargado y administrador (JWT) | RF-16, RF-26 | 21 |
 | GET | `/api/auth/yo` | Datos de la sesión | – | 21 |
 | GET | `/api/encargado/lugares` | Lugares de su sector | RF-17, RF-18 | 21 |
+| POST | `/api/encargado/lugares/:id/liberar` | Registra la salida del vehículo con el `idReserva` de la ocupación actual | RF-17, RF-38 | — |
 | GET | `/api/encargado/fichas` | Fichas de su sector (filtros estado y fecha) | RF-24, RF-25 | 21 |
 | GET | `/api/encargado/fichas/:codigo` | Detalle de la ficha | RF-20 | 21 |
 | POST | `/api/encargado/fichas/:codigo/cobrar` | Registra el cobro en efectivo | RF-22 | 21 |
@@ -54,10 +55,16 @@
 
 | Método | Ruta | Descripción | Req. | Día |
 |---|---|---|---|---|
-| GET | `/api/admin/lugares` | Estado de los 40 lugares | RF-35 | 22 |
+| GET | `/api/admin/lugares` | Estado de los lugares activos | RF-35 | 22 |
+| GET / POST | `/api/admin/sectores` | Lista y crea sectores. La creación acepta `nombre`, `descripcion` opcional y `monto` inicial | RF-27 | — |
+| PATCH | `/api/admin/sectores/:idSector` | Edita `nombre`, `descripcion` y `activo` | RF-27 | — |
+| GET / POST | `/api/admin/sectores/:idSector/lugares` | Lista lugares del sector o crea uno con `numero` | RF-27 | — |
+| PATCH | `/api/admin/sectores/:idSector/lugares/:id` | Edita `numero` y `activo` | RF-27 | — |
 | GET | `/api/admin/cancelaciones` | Cancelaciones y expiraciones, con filtros | RF-31, RF-32 | 22 |
 | GET | `/api/admin/pagos` | Pagos y fichas, con filtros | RF-33 | 22 |
 | GET | `/api/admin/reportes/resumen` | Ingresos, ocupación y cancelaciones | RF-34 | 22 |
+| GET | `/api/admin/reportes/resumen/pdf`, `/api/admin/reportes/resumen/xlsx` | Descarga con los filtros `desde`, `hasta` e `idSector` | RF-34 | — |
+| GET | `/api/admin/bitacora` | Bitácora con responsable y filtros de fecha | RF-38 | — |
 | GET | `/api/admin/tarifas` | Tarifas vigentes | RF-28 | 22 |
 | PUT | `/api/admin/tarifas/:idSector` | Cambia la tarifa de un sector | RF-28 | 22 |
 | GET | `/api/admin/encargados` | Lista de encargados | RF-29 | 22 |
@@ -65,7 +72,7 @@
 | PATCH | `/api/admin/encargados/:id` | Edita, cambia de sector o desactiva | RF-29, RF-30 | 22 |
 | POST | `/api/admin/encargados/:id/password` | Restablece la contraseña | RF-29 | 22 |
 
-Pendiente: exportar reportes a PDF o Excel (RF-34) y gestionar sectores y lugares (RF-27).
+En modo Red Enlace, la creación del pago QR devuelve `imagenQr`. El webhook recibe `numeroReferencia` con el encabezado `x-pasarela-secret` y comprueba el cobro consultando al proveedor. Para configurar el ambiente y el modo local, consulta el [README del backend](../backend/README.md#activar-qr-con-red-enlace).
 
 ## Estructura del backend
 

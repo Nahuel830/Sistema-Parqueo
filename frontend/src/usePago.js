@@ -175,7 +175,9 @@ export function usePago(reserva, cierre, consultarEstado) {
       try {
         const datos = await iniciarPago(credencial, metodo, AbortSignal.timeout(7000));
         if (datos.ficha) mostrarFicha(credencial, datos.ficha);
-        else setPagos((anterior) => ({ ...anterior, qr: { ...credencial, codigoQr: datos.codigoQr } }));
+        else setPagos((anterior) => ({
+          ...anterior, qr: { ...credencial, codigoQr: datos.codigoQr, imagenQr: datos.imagenQr, simulado: datos.simulado },
+        }));
       } catch (error) {
         if (error.status === 409 || !error.status) {
           try {
@@ -186,7 +188,8 @@ export function usePago(reserva, cierre, consultarEstado) {
             // Si todavía no hay ficha, se informa el resultado de la solicitud de pago.
           }
         }
-        setAviso(error.status === 410 ? 'La reserva venció.' : 'No se pudo iniciar el pago. Vuelve a intentarlo.');
+        const mensaje = [409, 503].includes(error.status) ? error.message : 'No se pudo iniciar el pago. Vuelve a intentarlo.';
+        setAviso(error.status === 410 ? 'La reserva venció.' : mensaje);
       }
     });
   }

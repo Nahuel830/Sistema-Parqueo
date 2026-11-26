@@ -1,7 +1,21 @@
-import { listarSectores, solicitar } from '../api.js';
+import { descargar, solicitar } from '../api.js';
 
-function consultar(ruta, token, signal) {
+export function consultar(ruta, token, signal) {
   return solicitar(ruta, { headers: { Authorization: `Bearer ${token}` }, signal });
+}
+
+export function guardar(ruta, token, method, datos) {
+  return solicitar(ruta, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+    signal: AbortSignal.timeout(12000),
+  });
+}
+
+function conFiltros(ruta, filtros) {
+  const parametros = new URLSearchParams(Object.entries(filtros).filter(([, valor]) => valor !== ''));
+  return parametros.size ? `${ruta}?${parametros}` : ruta;
 }
 
 export function iniciarSesion(credenciales, signal) {
@@ -18,22 +32,25 @@ export function consultarSesion(token, signal) {
 }
 
 export function consultarCancelaciones(token, filtros, signal) {
-  const parametros = new URLSearchParams(Object.entries(filtros).filter(([, valor]) => valor !== ''));
-  const ruta = parametros.size ? `/admin/cancelaciones?${parametros}` : '/admin/cancelaciones';
-  return consultar(ruta, token, signal);
+  return consultar(conFiltros('/admin/cancelaciones', filtros), token, signal);
 }
 
 export async function consultarSectores(token, signal) {
-  const [sectores, lugares] = await Promise.all([
-    listarSectores(signal),
-    consultar('/admin/lugares', token, signal),
-  ]);
-  const nombres = new Map(sectores.map(({ id, nombre }) => [id, nombre]));
-  for (const { idSector, sector } of lugares) nombres.set(idSector, sector);
-  return [...nombres].sort((a, b) => a[1].localeCompare(b[1], 'es-BO'));
+  const sectores = await consultar('/admin/sectores', token, signal);
+  return sectores.map(({ id, nombre }) => [id, nombre]);
 }
 
-// Contrato propuesto para RF-38. La API actual puede responder 404 hasta publicarlo.
 export function consultarBitacora(token, signal) {
   return consultar('/admin/bitacora', token, signal);
+}
+
+export function consultarReporte(token, filtros, signal) {
+  return consultar(conFiltros('/admin/reportes/resumen', filtros), token, signal);
+}
+
+export function descargarReporte(token, filtros, formato) {
+  return descargar(conFiltros(`/admin/reportes/resumen/${formato}`, filtros), {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(15000),
+  }, `reporte-parqueo.${formato}`);
 }

@@ -104,7 +104,8 @@ CREATE TABLE pago (
   metodo VARCHAR(8) NOT NULL,
   monto NUMERIC(8, 2) NOT NULL,
   estado VARCHAR(10) NOT NULL DEFAULT 'PENDIENTE',
-  codigo_qr VARCHAR(255),
+  codigo_qr TEXT,
+  proveedor_qr VARCHAR(15),
   referencia_pasarela VARCHAR(100),
   fecha_pago TIMESTAMPTZ,
   CONSTRAINT chk_pago_metodo CHECK (metodo IN ('QR', 'EFECTIVO')),
@@ -115,6 +116,7 @@ CREATE TABLE pago (
 );
 
 CREATE INDEX idx_pago_reserva ON pago (id_reserva);
+CREATE UNIQUE INDEX uk_pago_qr_redenlace ON pago (referencia_pasarela) WHERE proveedor_qr = 'RED_ENLACE';
 CREATE INDEX idx_pago_metodo_fecha ON pago (metodo, fecha_pago);
 
 CREATE TABLE ficha (

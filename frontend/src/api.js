@@ -1,6 +1,6 @@
 const baseApi = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
 
-export async function solicitar(ruta, opciones, incluirHora = false) {
+async function peticion(ruta, opciones) {
   const respuesta = await fetch(`${baseApi}${ruta}`, { cache: 'no-store', ...opciones });
   if (!respuesta.ok) {
     const cuerpo = await respuesta.json().catch(() => null);
@@ -9,9 +9,24 @@ export async function solicitar(ruta, opciones, incluirHora = false) {
     throw error;
   }
 
+  return respuesta;
+}
+
+export async function solicitar(ruta, opciones, incluirHora = false) {
+  const respuesta = await peticion(ruta, opciones);
   const { datos } = await respuesta.json();
   if (incluirHora) return { datos, horaServidor: Date.parse(respuesta.headers.get('Date')) };
   return datos;
+}
+
+export async function descargar(ruta, opciones, nombre) {
+  const respuesta = await peticion(ruta, opciones);
+  const url = URL.createObjectURL(await respuesta.blob());
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function listarSectores(signal) {

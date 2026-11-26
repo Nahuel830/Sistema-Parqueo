@@ -2,15 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import Cabecera from '../Cabecera.jsx';
 import { consultarSesion, iniciarSesion } from './apiAdmin.js';
 import Auditoria from './Auditoria.jsx';
+import LugaresEncargado from './LugaresEncargado.jsx';
 import './admin.css';
 
-const claveSesion = 'parqueo-tarija:sesion-admin';
-
-function recuperarToken() {
+function recuperarToken(claveSesion) {
   try { return sessionStorage.getItem(claveSesion); } catch { return null; }
 }
 
-function guardarToken(token) {
+function guardarToken(claveSesion, token) {
   try {
     if (token) sessionStorage.setItem(claveSesion, token);
     else sessionStorage.removeItem(claveSesion);
@@ -19,7 +18,7 @@ function guardarToken(token) {
   }
 }
 
-function AccesoAdmin({ aviso, alEntrar }) {
+function Acceso({ aviso, alEntrar, rol, titulo }) {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
 
@@ -34,8 +33,8 @@ function AccesoAdmin({ aviso, alEntrar }) {
         username: formulario.get('username').trim(),
         password: formulario.get('password'),
       }, AbortSignal.timeout(8000));
-      if (datos.usuario.rol !== 'ADMIN') {
-        setError('Esta cuenta no tiene acceso de administrador.');
+      if (datos.usuario.rol !== rol) {
+        setError('Esta cuenta no tiene acceso a este panel.');
         return;
       }
       alEntrar(datos);
@@ -48,7 +47,7 @@ function AccesoAdmin({ aviso, alEntrar }) {
 
   return (
     <section className="panel acceso-admin" aria-labelledby="titulo-acceso">
-      <h2 id="titulo-acceso">Acceso del administrador</h2>
+      <h2 id="titulo-acceso">{titulo}</h2>
       {(error || aviso) && <p className="aviso-admin" role="alert">{error || aviso}</p>}
       <form className="formulario-admin" onSubmit={ingresar}>
         <label>Usuario<input name="username" autoComplete="username" required /></label>
@@ -61,9 +60,13 @@ function AccesoAdmin({ aviso, alEntrar }) {
   );
 }
 
-export default function AdminApp() {
+export default function AdminApp({ rol = 'ADMIN' }) {
+  const esAdmin = rol === 'ADMIN';
+  const claveSesion = esAdmin ? 'parqueo-tarija:sesion-admin' : 'parqueo-tarija:sesion-encargado';
+  const titulo = esAdmin ? 'Administración del parqueo' : 'Panel del encargado';
+  const Contenido = esAdmin ? Auditoria : LugaresEncargado;
   const [sesion, setSesion] = useState(() => {
-    const token = recuperarToken();
+    const token = recuperarToken(claveSesion);
     return token ? { token, usuario: null } : null;
   });
   const [aviso, setAviso] = useState('');
@@ -71,18 +74,18 @@ export default function AdminApp() {
   const [intento, setIntento] = useState(0);
 
   const cerrarSesion = useCallback((mensaje = '') => {
-    guardarToken(null);
+    guardarToken(claveSesion, null);
     setSesion(null);
     setErrorSesion(false);
     setAviso(mensaje);
-  }, []);
+  }, [claveSesion]);
 
   const accesoRechazado = useCallback(() => {
     cerrarSesion('Tu sesión ya no tiene acceso. Vuelve a iniciar sesión.');
   }, [cerrarSesion]);
 
   function entrar(datos) {
-    guardarToken(datos.token);
+    guardarToken(claveSesion, datos.token);
     setSesion({ token: datos.token, usuario: datos.usuario });
     setAviso('');
   }
@@ -95,7 +98,7 @@ export default function AdminApp() {
     consultarSesion(sesion.token, signal)
       .then((usuario) => {
         if (controlador.signal.aborted) return;
-        if (usuario.rol !== 'ADMIN') accesoRechazado();
+        if (usuario.rol !== rol) accesoRechazado();
         else setSesion({ token: sesion.token, usuario });
       })
       .catch((error) => {
@@ -105,7 +108,7 @@ export default function AdminApp() {
       });
 
     return () => controlador.abort();
-  }, [sesion, intento, accesoRechazado]);
+  }, [sesion, intento, accesoRechazado, rol]);
 
   return (
     <>
@@ -117,12 +120,12 @@ export default function AdminApp() {
       </Cabecera>
       <main className="contenedor principal admin">
         <section className="portada" aria-labelledby="titulo-admin">
-          <h1 id="titulo-admin">Auditoría del parqueo</h1>
+          <h1 id="titulo-admin">{titulo}</h1>
         </section>
 
-        {!sesion && <AccesoAdmin aviso={aviso} alEntrar={entrar} />}
+        {!sesion && <Acceso aviso={aviso} alEntrar={entrar} rol={rol} titulo={esAdmin ? 'Acceso del administrador' : 'Acceso del encargado'} />}
         {sesion && !sesion.usuario && (
-          <section className="panel acceso-admin" aria-label="Sesión de administrador">
+          <section className="panel acceso-admin" aria-label="Sesión">
             {errorSesion ? (
               <>
                 <p className="aviso-admin" role="alert">No se pudo verificar tu sesión.</p>
@@ -134,7 +137,7 @@ export default function AdminApp() {
             ) : <p role="status">Verificando sesión…</p>}
           </section>
         )}
-        {sesion?.usuario && <Auditoria token={sesion.token} accesoRechazado={accesoRechazado} />}
+        {sesion?.usuario && <Contenido token={sesion.token} accesoRechazado={accesoRechazado} />}
       </main>
     </>
   );

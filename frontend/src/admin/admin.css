@@ -48,6 +48,17 @@
 .tipo-auditoria[data-tipo='EXPIRACION'] { background: #f8ebcf; color: #794a12; }
 .pie-auditoria { margin-top: 8px; }
 
+.panel-gestion, .grupo-reporte { display: grid; gap: 12px; }
+.panel-gestion .filtros-auditoria { margin-block: 0; }
+.formulario-gestion, .salida-encargado { padding: 14px; border: 1px solid var(--borde); border-radius: 8px; background: #f8faf7; }
+.formulario-gestion fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; border: 0; padding: 0; }
+.controles-gestion { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.controles-gestion .formulario-admin { flex: 1 1 220px; }
+.lista-gestion { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 8px; list-style: none; padding: 0; }
+.lista-gestion li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid var(--borde); border-radius: 8px; }
+.lista-gestion li span { display: block; color: var(--secundario); font-size: .875rem; }
+.salida-encargado p { margin-bottom: 8px; }
+
 @media (min-width: 760px) {
   .filtros-auditoria { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }

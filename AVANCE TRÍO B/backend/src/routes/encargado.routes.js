@@ -8,6 +8,7 @@ const router = Router();
 router.use(autenticar, exigirRol('ENCARGADO'));
 
 router.get('/lugares', c.lugares);
+router.post('/lugares/:id/liberar', c.liberar);
 router.get('/fichas', c.fichas);
 router.get('/fichas/:codigo', c.ficha);
 router.post('/fichas/:codigo/cobrar', c.cobrar);

@@ -1,7 +1,7 @@
 const { pool } = require('../config/db');
 const { config } = require('../config/env');
 const { tokenDeReserva, tokenValido } = require('../utils/seguridadReserva');
-const { anularPagoYFicha } = require('./pagos.service');
+const { anularPagoYFicha, cerrarQrPendiente } = require('./pagos.service');
 
 const DURACION_MINUTOS = 5;
 
@@ -51,17 +51,18 @@ async function transaccion(trabajo) {
 // La única reserva activa por lugar está garantizada además por el índice parcial.
 async function expirarReservaDelLugar(cliente, idLugar) {
   const { rows } = await cliente.query(
-    `SELECT id_reserva, fecha_inicio
+    `SELECT id_reserva, id_lugar, fecha_inicio, fecha_expiracion, estado
        FROM reserva
       WHERE id_lugar = $1
         AND estado = 'ACTIVA'
-        AND fecha_expiracion <= NOW()
+        AND fecha_expiracion <= clock_timestamp()
       FOR UPDATE`,
     [idLugar]
   );
-  if (!rows.length) return false;
+  if (!rows.length) return null;
 
   const reserva = rows[0];
+  if (await cerrarQrPendiente(cliente, reserva)) return 'PAGADA';
   await cliente.query(
     `UPDATE reserva
         SET estado = 'EXPIRADA', fecha_cierre = NOW()
@@ -87,7 +88,7 @@ async function expirarReservaDelLugar(cliente, idLugar) {
             ('LUGAR', $2, 'LIBERACION_POR_EXPIRACION', 'RESERVADO', 'LIBRE')`,
     [reserva.id_reserva, idLugar]
   );
-  return true;
+  return 'EXPIRADA';
 }
 
 async function crearReserva(datos) {
@@ -103,21 +104,24 @@ async function crearReserva(datos) {
     }
   }
 
-  return transaccion(async (cliente) => {
+  const resultado = await transaccion(async (cliente) => {
     const { rows: lugares } = await cliente.query(
-      `SELECT l.id_lugar, l.estado, l.id_sector
-         FROM lugar l JOIN sector s ON s.id_sector = l.id_sector
-        WHERE l.id_lugar = $1 AND l.activo = TRUE AND s.activo = TRUE
+      `WITH sector_activo AS MATERIALIZED (
+         SELECT s.id_sector FROM sector s
+          WHERE s.activo AND s.id_sector = (SELECT id_sector FROM lugar WHERE id_lugar = $1)
+          FOR SHARE
+       )
+       SELECT l.id_lugar, l.estado, l.id_sector
+         FROM sector_activo s JOIN lugar l ON s.id_sector = l.id_sector
+        WHERE l.id_lugar = $1 AND l.activo
         FOR UPDATE OF l`,
       [idLugar]
     );
     if (!lugares.length) throw errorHttp(404, 'Lugar de parqueo no encontrado');
 
     const lugar = lugares[0];
-    const vencio = await expirarReservaDelLugar(cliente, idLugar);
-    if (!vencio && lugar.estado !== 'LIBRE') {
-      throw errorHttp(409, 'Este lugar no está disponible');
-    }
+    const cierre = await expirarReservaDelLugar(cliente, idLugar);
+    if (cierre !== 'EXPIRADA' && lugar.estado !== 'LIBRE') return null;
 
     const { rows: tarifas } = await cliente.query(
       `SELECT id_tarifa, monto
@@ -152,6 +156,8 @@ async function crearReserva(datos) {
     const tokenReserva = tokenDeReserva(reserva.id_reserva, reserva.fecha_inicio, config.jwt.secreto);
     return formatearReserva(reserva, tokenReserva);
   });
+  if (!resultado) throw errorHttp(409, 'Este lugar no está disponible');
+  return resultado;
 }
 
 async function obtenerReserva(id, token) {
@@ -198,13 +204,16 @@ async function cancelarReserva(id, token) {
       return { codigo: 409, mensaje: 'Solo se pueden cancelar reservas activas' };
     }
 
-    const expiro = await expirarReservaDelLugar(cliente, previa.id_lugar);
-    if (expiro) return { codigo: 410, mensaje: 'La reserva ya había expirado' };
+    const cierre = await expirarReservaDelLugar(cliente, previa.id_lugar);
+    if (cierre === 'EXPIRADA') return { codigo: 410, mensaje: 'La reserva ya había expirado' };
+    if (cierre === 'PAGADA' || await cerrarQrPendiente(cliente, reserva)) {
+      return { codigo: 409, mensaje: 'El pago QR ya está confirmado' };
+    }
 
     // El tiempo se valida en la BD; no confiar en el contador del frontend.
     const { rows: actualizadas } = await cliente.query(
       `UPDATE reserva SET estado = 'CANCELADA', fecha_cierre = NOW()
-        WHERE id_reserva = $1 AND estado = 'ACTIVA' AND fecha_expiracion > NOW()
+        WHERE id_reserva = $1 AND estado = 'ACTIVA' AND fecha_expiracion > clock_timestamp()
        RETURNING id_reserva`,
       [idReserva]
     );
@@ -247,11 +256,16 @@ async function expirarReservasPendientes() {
     );
     let total = 0;
     for (const r of rows) {
-      const expirado = await transaccion(async (cliente) => {
-        await cliente.query('SELECT id_lugar FROM lugar WHERE id_lugar = $1 FOR UPDATE', [r.id_lugar]);
-        return expirarReservaDelLugar(cliente, r.id_lugar);
-      });
-      if (expirado) total++;
+      try {
+        const cierre = await transaccion(async (cliente) => {
+          await cliente.query('SELECT id_lugar FROM lugar WHERE id_lugar = $1 FOR UPDATE', [r.id_lugar]);
+          return expirarReservaDelLugar(cliente, r.id_lugar);
+        });
+        if (cierre === 'EXPIRADA') total++;
+      } catch (error) {
+        if (error.status !== 503) throw error;
+        console.warn('Verificación QR pendiente al vencer la reserva del lugar', r.id_lugar);
+      }
     }
     return total;
   } finally {

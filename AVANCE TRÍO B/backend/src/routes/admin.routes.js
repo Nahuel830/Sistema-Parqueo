@@ -8,9 +8,16 @@ const router = Router();
 router.use(autenticar, exigirRol('ADMIN'));
 
 router.get('/lugares', c.lugares);
+router.get('/sectores', c.sectores);
+router.post('/sectores', c.crearSector);
+router.patch('/sectores/:idSector', c.editarSector);
+router.get('/sectores/:idSector/lugares', c.lugaresDelSector);
+router.post('/sectores/:idSector/lugares', c.crearLugar);
+router.patch('/sectores/:idSector/lugares/:id', c.editarLugar);
 router.get('/cancelaciones', c.cancelaciones);
 router.get('/pagos', c.pagos);
 router.get('/reportes/resumen', c.resumen);
+router.get('/reportes/resumen/:formato', c.exportarResumen);
 router.get('/bitacora', c.bitacora);
 router.get('/tarifas', c.tarifas);
 router.put('/tarifas/:idSector', c.cambiarTarifa);

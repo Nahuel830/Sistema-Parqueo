@@ -6,6 +6,8 @@
 
 El SQL instala en una base vacía las mismas diez tablas, columnas, restricciones, índices y datos iniciales de `AVANCE TRÍO B/backend/db/schema.sql` en `backend/sectores-lugares` (5811729). Se retiraron las órdenes de borrado del instalador y la zona horaria se configura solo para la transacción. Desde la raíz del repositorio: `psql -v ON_ERROR_STOP=1 -d nombre_de_base -f modelos-base-de-datos/modelo-fisico-postgresql.sql`. La placa opcional en reserva es un campo de compatibilidad. El flujo público permite dejarla vacía.
 
+Para ejecutar la versión actual del sistema, usa el esquema del backend o aplica su migración de pagos si la base ya se creó con este modelo. [Configuración y migración del backend](../AVANCE%20TR%C3%8DO%20B/backend/README.md#activar-qr-con-red-enlace)
+
 ## Correspondencia con los requisitos funcionales
 
 | RF | Datos y comportamiento esperado |
@@ -19,10 +21,10 @@ El SQL instala en una base vacía las mismas diez tablas, columnas, restriccione
 | 24–25, 31–32 | El historial de sector se obtiene por reserva → lugar → sector. Usar unión externa con ficha para incluir cancelaciones y expiraciones previas a la emisión. Cancelación conserva fecha, tipo, motivo y segundos transcurridos. |
 | 33–35 | Filtrar pagos y fichas por fecha, método y sector. Sumar solo pagos CONFIRMADOS para reportes de ingresos. La ocupación se consulta en lugar. El backend exporta los reportes a PDF o Excel y publica los cambios de estado. |
 | 38 | Registrar cancelación, expiración, cobro y cada transición en bitacora con acción, estados, fecha y responsable. Para eventos anónimos o automáticos el usuario es nulo y la acción debe distinguir CONDUCTOR de SISTEMA. |
-| 39 | El backend de pagos y el proceso de expiración deben coordinarse sobre el mismo lugar y reserva. La protección del QR en confirmación requiere el acuerdo indicado abajo. |
+| 39 | El backend consulta a Red Enlace antes de cerrar la reserva con un QR pendiente. El pago se aplica si la hora bancaria cae dentro del plazo. |
 | 40 | Incorporar sectores, lugares y tarifas mediante datos. Los dos sectores iniciales son datos de arranque. |
 
-## Puntos para acordar con el Trío B
+## Puntos registrados durante el diseño
 
 1. **QR pagado antes del vencimiento (RF-39).** En la rama de reservas (082f870), el proceso expira reservas ACTIVAS por fecha. PENDIENTE por sí solo no distingue un QR recién mostrado de un pago iniciado en plazo y reconocido por la pasarela. Propuesta: conservar referencia y hora verificable de la pasarela, distinguir la confirmación en curso y hacer que el proceso de vencimiento consulte esa evidencia bajo el mismo bloqueo. Definir conciliación y reintento ante notificaciones tardías o repetidas.
 2. **Efectivo y vencimiento (RF-12, 19, 22).** Elegir efectivo emite la ficha. El importe entra en ingresos al registrarse el cobro. Acordar cómo proteger una ficha ya emitida pendiente de verificación del proceso que expira reservas y cuánto tiempo puede esperar al encargado.
