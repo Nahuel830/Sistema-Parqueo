@@ -38,6 +38,8 @@ npm install
 
 3. Ajusta `DB_HOST`, `DB_PORT` (5432), `DB_USER` (por defecto `postgres`), `DB_PASSWORD` y `DB_NAME` según tu PostgreSQL local. Para una base local sin SSL deja `DB_SSL=false`.
 
+4. Deja `PASARELA_PROVEEDOR=simulada` y genera un `PASARELA_SECRET` local de al menos 16 caracteres para confirmar el QR durante la demostración.
+
 > El archivo `.env` está en `.gitignore`. Nunca lo subas al repositorio.
 
 ## Base de datos
@@ -126,6 +128,14 @@ Las consultas usan sentencias parametrizadas de PostgreSQL (`$1`, `$2`) para pre
 - **Efectivo:** se emite la ficha al elegirlo; el pago queda `PENDIENTE` hasta que el encargado cobre (se agrega con el login, 21 nov). Si el conductor cancela o la reserva vence, la ficha se `ANULA` y el pago se `RECHAZA`.
 - Al emitir una ficha se crea una **notificación** para los encargados activos del sector (RF-19, RF-23) y se registra todo en la **bitácora**.
 
+### Probar un pago QR simulado
+
+El archivo `.env.example` selecciona el modo simulado para desarrollo. La API devuelve `codigoQr`, `referencia` y `simulado: true` al iniciar el pago. La pantalla muestra que es un QR de prueba.
+
+Para simular la confirmación, envía `POST /api/pagos/qr/confirmar` con el encabezado `x-pasarela-secret` igual a tu `PASARELA_SECRET` local. Usa `{ "referencia": "..." }` con la referencia devuelta al iniciar el pago. La API emite la ficha y marca el lugar como ocupado. Puedes usar la solicitud «Confirmar pago QR (pasarela)» de la colección de Postman.
+
+Para operar solo en efectivo usa `PASARELA_PROVEEDOR=deshabilitada`.
+
 ### Activar QR con Red Enlace
 
 1. Para una base existente, aplica `db/migraciones/001-pagos-red-enlace.sql` con `psql -v ON_ERROR_STOP=1 -d parqueo_tarija -f db/migraciones/001-pagos-red-enlace.sql`. En una instalación nueva, `db/schema.sql` ya incluye estos cambios.
@@ -133,8 +143,6 @@ Las consultas usan sentencias parametrizadas de PostgreSQL (`$1`, `$2`) para pre
 3. Define `REDENLACE_WEBHOOK_URL` con la URL HTTPS accesible para Red Enlace que termina en `/api/pagos/qr/confirmar`. Red Enlace requiere certificación antes de entregar credenciales productivas. [Documentación oficial de QR Simple](https://openhub.redenlace.com.bo/es/products/apis-de-cobro-mediante-qr/cobro-por-qr-simple)
 
 La vigencia del QR reserva cinco segundos de margen respecto del vencimiento local. Si quedan menos de diez segundos de vigencia para el QR, el conductor aún puede elegir efectivo. Al vencer, cancelar o cambiar a efectivo, la API comprueba con la pasarela si se acreditó el QR. Un pago bancario registrado dentro del plazo se aplica aunque la notificación llegue después. Si la pasarela no está disponible, la reserva permanece vinculada al lugar y el barrido vuelve a intentar verificarla. Un cobro que requiere conciliación manual queda en bitácora como `QR_REQUIERE_CONCILIACION`.
-
-Para desarrollo local puedes elegir `PASARELA_PROVEEDOR=simulada` y enviar `{ "referencia": "..." }` al webhook con `x-pasarela-secret`. En este modo la API devuelve `codigoQr`, `referencia` y `simulado: true`. Para operar solo en efectivo usa `PASARELA_PROVEEDOR=deshabilitada`.
 
 **Login y panel del encargado (21 nov).**
 - **Login:** JWT firmado con `JWT_SECRET` (HS256, vence según `JWT_EXPIRES_IN`) y contraseñas con **bcrypt**. Ante un usuario o contraseña incorrectos responde siempre el mismo mensaje. Después de 5 intentos fallidos seguidos (por IP y usuario) bloquea 15 minutos (429).

@@ -9,7 +9,7 @@ Estado del sistema al 26 de noviembre de 2026. Las pruebas iniciales usaron Post
 
 ## Cómo ponerlo en marcha
 1. En una base nueva, cargar `backend/db/schema.sql`. **El script borra y recrea las tablas.** Para actualizar una base existente, aplicar `backend/db/migraciones/001-pagos-red-enlace.sql`.
-2. Copiar `backend/.env.example` a `backend/.env` y completar `DB_PASSWORD` y `JWT_SECRET` (32 caracteres o más). Para habilitar los cobros por QR, sigue la [configuración de Red Enlace](backend/README.md#activar-qr-con-red-enlace).
+2. Copiar `backend/.env.example` a `backend/.env` y completar `DB_PASSWORD`, `JWT_SECRET` (32 caracteres o más) y `PASARELA_SECRET` (16 caracteres o más). La configuración de ejemplo selecciona el [QR simulado](backend/README.md#probar-un-pago-qr-simulado).
 3. En `backend/`: `npm install`, `npm run seed:usuarios` (crea el administrador y un encargado por sector; guarda las contraseñas que muestra) y `npm run dev`.
 4. Frontend (Trío A): `cd frontend`, `npm ci`, `npm run dev`, y abrir `http://localhost:5173`.
 
@@ -28,7 +28,7 @@ Comprobaciones del avance inicial:
 
 | Requerimientos | Estado | Notas |
 |---|---|---|
-| RF-01 a RF-15 (conductor) | Implementados en API y frontend | La disponibilidad se consulta cada segundo. Los cobros reales por QR requieren credenciales y certificación de Red Enlace. |
+| RF-01 a RF-15 (conductor) | Implementados en API y frontend | La disponibilidad se consulta cada segundo. La demostración usa QR simulado y los cobros reales quedan pendientes de activación. |
 | RF-16 a RF-25 (encargado) | Disponibles en la API | El panel web consulta los lugares del sector y registra salidas. Las notificaciones, el cobro y la verificación de fichas se operan por API. |
 | RF-26, RF-28 a RF-33 y RF-35 (administrador) | Disponibles en la API | El panel web incluye cancelaciones y bitácora. Las tarifas, los encargados y el listado de pagos se gestionan por API. |
 | RF-34 reportes | Implementado | Resumen de ingresos, ocupación y cancelaciones con descarga PDF y Excel. |
